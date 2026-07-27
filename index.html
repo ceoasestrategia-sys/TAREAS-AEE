@@ -492,14 +492,15 @@
     ];
     const USERS = [
       { id: "admin", name: "Administrador", role: "Admin", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD", "IPNNC", "EMPRESAS", "1116", "ADMINISTRATIVOS", "PROGRAMACION"], pin: "0000" },
-      { id: "amaury-mesa", name: "Amaury Mesa", role: "Area", areas: ["EMPRESAS"], pin: "2025" },
-      { id: "maria-paula", name: "Maria Paula", role: "Area", areas: ["EMPRESAS"], pin: "2025" },
-      { id: "camila-daza", name: "Camila Daza", role: "Area", areas: ["EMPRESAS", "IPNNC"], pin: "2025" },
-      { id: "alejandra-valencia", name: "Alejandra Valencia", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "2026" },
-      { id: "valentina-casas", name: "Valentina Casas", role: "Area", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD"], pin: "2026" },
-      { id: "paula-bogota", name: "Paula Bogota", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "2026" },
-      { id: "britney-cardenas", name: "Britney Cardenas", role: "Area", areas: ["IPNNC"], pin: "2026" },
-      { id: "paula-guevara", name: "Paula Guevara", role: "Area", areas: ["IPNNC"], pin: "2026" }
+      { id: "amaury-mesa", name: "Amaury Mesa", role: "Area", areas: ["EMPRESAS"], pin: "5132" },
+      { id: "maria-paula", name: "Maria Paula", role: "Area", areas: ["EMPRESAS"], pin: "8644" },
+      { id: "camila-daza", name: "Camila Daza", role: "Area", areas: ["EMPRESAS", "IPNNC"], pin: "2708" },
+      { id: "alejandra-valencia", name: "Alejandra Valencia", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "2654" },
+      { id: "valentina-casas", name: "Valentina Casas", role: "Area", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD"], pin: "0476" },
+      { id: "paula-bogota", name: "Paula Bogota", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "6877" },
+      { id: "britney-cardenas", name: "Britney Cardenas", role: "Area", areas: ["IPNNC"], pin: "2660" },
+      { id: "paula-guevara", name: "Paula Guevara", role: "Area", areas: ["IPNNC"], pin: "5090" },
+      { id: "dilan-garcia", name: "Dilan Garcia", role: "Area", areas: ["PROGRAMACION"], pin: "0507" }
     ];
     const dayMs = 24 * 60 * 60 * 1000;
     let attachmentsDraft = [];
@@ -547,6 +548,14 @@
     function ownerForArea(areaName) {
       return USERS.filter(item => item.role === "Area" && item.areas.includes(areaName)).map(item => item.name).join(" / ");
     }
+    function assignmentAreasFor(user) {
+      if (!user || user.role === "Admin") return user ? user.areas : [];
+      return Array.from(new Set([...user.areas, "PROGRAMACION"]));
+    }
+    function ownerForAssignment(areaName) {
+      if (areaName === "PROGRAMACION") return ownerForArea("PROGRAMACION");
+      return currentUser && currentUser.role !== "Admin" ? currentUser.name : ownerForArea(areaName);
+    }
     function companyById(id) {
       return companies.find(item => item.id === id);
     }
@@ -591,16 +600,17 @@
       const viewAreas = currentUser.role === "Admin" ? currentUser.areas : currentUser.areas;
       viewArea.innerHTML = `<option value="Todas">Todas mis areas</option>` + viewAreas.map(item => `<option value="${item}">${item}</option>`).join("");
       viewArea.style.display = currentUser.role === "Admin" || currentUser.areas.length > 1 ? "block" : "none";
+      const assignAreas = assignmentAreasFor(currentUser);
       Array.from(area.options).forEach(option => {
-        option.hidden = currentUser.role !== "Admin" && !currentUser.areas.includes(option.value);
+        option.hidden = currentUser.role !== "Admin" && !assignAreas.includes(option.value);
       });
-      area.disabled = currentUser.role !== "Admin" && currentUser.areas.length === 1;
+      area.disabled = currentUser.role !== "Admin" && assignAreas.length === 1;
       area.value = currentUser.role === "Admin" ? "PROCESOS" : currentUser.areas[0];
       updateOwnerField();
       render();
     }
     function updateOwnerField() {
-      owner.value = currentUser && currentUser.role !== "Admin" ? currentUser.name : ownerForArea(area.value);
+      owner.value = ownerForAssignment(area.value);
       companyField.style.display = area.value === "EMPRESAS" ? "grid" : "none";
     }
     const labels = {
@@ -724,7 +734,7 @@
         id: crypto.randomUUID(),
         title: title.value,
         area: selectedArea,
-        owner: currentUser.role === "Admin" ? ownerForArea(selectedArea) : currentUser.name,
+        owner: ownerForAssignment(selectedArea),
         companyId: selectedArea === "EMPRESAS" ? company.value : "",
         dueDate: dueDate.value,
         priority: priority.value,
