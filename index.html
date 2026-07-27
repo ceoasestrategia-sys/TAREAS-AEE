@@ -468,6 +468,7 @@
   </main>
 
   <script>
+    const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbxDXa3YZRJYHBoSKJ9PfJOYz37nwU1Bhh_1WCqfOZFyuAtCTB1pV_WdPZIWMHKAbzMQ/exec";
     const STORAGE_KEY = "mini-remedy-html-activities";
     const SESSION_KEY = "mini-remedy-html-session";
     const COMPANIES_KEY = "mini-remedy-html-companies";
@@ -515,12 +516,13 @@
       date.setDate(date.getDate() + days);
       return date.toISOString().slice(0, 10);
     };
-    let activities = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || [
+    const DEFAULT_ACTIVITIES = [
       { id: "1", title: "Radicar respuesta a requerimiento", area: "PROCESOS", owner: "Carolina", dueDate: addDays(-1), priority: "Alta", status: "En progreso", notes: "Falta validacion final de soportes." },
       { id: "2", title: "Actualizar base de audiencias", area: "PROGRAMACION", owner: "Daniel", dueDate: addDays(1), priority: "Alta", status: "Abierta", notes: "Cruzar novedades del juzgado." },
       { id: "3", title: "Enviar informe semanal al cliente", area: "EMPRESAS", owner: "Laura", dueDate: addDays(3), priority: "Media", status: "En espera", notes: "Pendiente aprobacion de cifras." },
       { id: "4", title: "Revisar poderes nuevos", area: "ADMINISTRATIVOS", owner: "Andres", dueDate: addDays(8), priority: "Baja", status: "Abierta", notes: "Lote de documentos entrantes." }
     ];
+    let activities = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || DEFAULT_ACTIVITIES;
     dueDate.value = addDays(2);
     folderInput.setAttribute("webkitdirectory", "");
     folderInput.setAttribute("directory", "");
@@ -547,9 +549,6 @@
     }
     function companyById(id) {
       return companies.find(item => item.id === id);
-    }
-    function saveCompanies() {
-      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
     }
     function renderCompanyOptions() {
       company.innerHTML = companies.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("");
@@ -614,6 +613,82 @@
     const rank = { critical: 0, risk: 1, watch: 2, ok: 3, closed: 4 };
     function save() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+      syncToGoogleSheets();
+    }
+    function saveCompanies() {
+      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+      syncToGoogleSheets();
+    }
+    function syncToGoogleSheets() {
+      if (!GOOGLE_SHEETS_API_URL) return;
+      fetch(GOOGLE_SHEETS_API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "saveAll",
+          tareas: activities,
+          usuarios: USERS,
+          empresas: companies
+        })
+      }).catch(error => console.warn("No se pudo sincronizar con Google Sheets", error));
+    }
+    function loadFromGoogleSheets() {
+      if (!GOOGLE_SHEETS_API_URL) return Promise.resolve();
+      return jsonp(GOOGLE_SHEETS_API_URL).then(data => {
+        if (Array.isArray(data.empresas) && data.empresas.length) {
+          companies = data.empresas.map(normalizeCompany);
+          selectedCompanyId = companies[0]?.id || selectedCompanyId;
+          localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+          renderCompanyOptions();
+        }
+        if (Array.isArray(data.tareas) && data.tareas.length) {
+          activities = data.tareas.map(normalizeActivity);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+        }
+      }).catch(error => console.warn("No se pudo cargar Google Sheets", error));
+    }
+    function jsonp(url) {
+      return new Promise((resolve, reject) => {
+        const callbackName = "tareasAeeCallback_" + Date.now();
+        const script = document.createElement("script");
+        window[callbackName] = (data) => {
+          delete window[callbackName];
+          script.remove();
+          resolve(data || {});
+        };
+        script.onerror = () => {
+          delete window[callbackName];
+          script.remove();
+          reject(new Error("No se pudo leer Google Sheets"));
+        };
+        script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + callbackName;
+        document.body.appendChild(script);
+      });
+    }
+    function normalizeCompany(item) {
+      return {
+        id: item.id || slugify(item.name || "empresa"),
+        name: item.name || "Empresa",
+        color: item.color || "#2563eb"
+      };
+    }
+    function normalizeActivity(item) {
+      return {
+        id: item.id || crypto.randomUUID(),
+        title: item.title || "Actividad sin titulo",
+        area: item.area || "PROCESOS",
+        owner: item.owner || "",
+        companyId: item.companyId || "",
+        dueDate: String(item.dueDate || addDays(2)).slice(0, 10),
+        priority: item.priority || "Media",
+        status: item.status || "Abierta",
+        notes: item.notes || "",
+        attachments: Array.isArray(item.attachments) ? item.attachments : []
+      };
+    }
+    function slugify(value) {
+      return String(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || crypto.randomUUID();
     }
     function addAttachments(files) {
       if (!files || !files.length) return;
@@ -818,7 +893,7 @@
     }
     const savedSession = localStorage.getItem(SESSION_KEY);
     currentUser = USERS.find(user => user.id === savedSession) || null;
-    applySession();
+    loadFromGoogleSheets().finally(applySession);
   </script>
 </body>
 </html>
