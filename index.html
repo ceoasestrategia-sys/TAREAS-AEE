@@ -399,7 +399,7 @@
   <main id="siteMain">
     <aside>
       <form class="panel" onsubmit="addActivity(event)">
-        <h2>Nueva actividad</h2>
+        <h2 id="formTitle">Nueva actividad</h2>
         <label><span>Actividad</span><input id="title" required placeholder="Ej. revisar respuesta"></label>
         <div class="two">
           <label><span>Area</span>
@@ -434,7 +434,7 @@
           </div>
           <ul id="pendingAttachments" class="attachment-list"></ul>
         </div>
-        <button style="width:100%">Agregar actividad</button>
+        <button id="submitActivityButton" style="width:100%">Agregar actividad</button>
       </form>
 
       <section class="panel">
@@ -504,6 +504,7 @@
     ];
     const dayMs = 24 * 60 * 60 * 1000;
     let attachmentsDraft = [];
+    let editingActivityId = null;
     let currentUser = null;
     let activeTab = "actividades";
     let selectedCompanyId = DEFAULT_COMPANIES[0].id;
@@ -730,27 +731,52 @@
       event.preventDefault();
       if (!currentUser) return;
       const selectedArea = area.value;
-      activities.unshift({
-        id: crypto.randomUUID(),
+      const nextActivity = {
+        id: editingActivityId || crypto.randomUUID(),
         title: title.value,
         area: selectedArea,
         owner: ownerForAssignment(selectedArea),
         companyId: selectedArea === "EMPRESAS" ? company.value : "",
         dueDate: dueDate.value,
         priority: priority.value,
-        status: "Abierta",
+        status: editingActivityId ? (activities.find(item => item.id === editingActivityId)?.status || "Abierta") : "Abierta",
         notes: notes.value,
         attachments: attachmentsDraft
-      });
+      };
+      if (editingActivityId) {
+        activities = activities.map(item => item.id === editingActivityId ? nextActivity : item);
+      } else {
+        activities.unshift(nextActivity);
+      }
+      editingActivityId = null;
       attachmentsDraft = [];
       event.target.reset();
       area.value = currentUser.role === "Admin" ? "PROCESOS" : currentUser.areas[0];
       updateOwnerField();
       dueDate.value = addDays(2);
       priority.value = "Media";
+      formTitle.textContent = "Nueva actividad";
+      submitActivityButton.textContent = "Agregar actividad";
       renderPendingAttachments();
       save();
       render();
+    }
+    function editActivity(id) {
+      const activity = activities.find(item => item.id === id);
+      if (!activity) return;
+      editingActivityId = id;
+      title.value = activity.title || "";
+      area.value = activity.area || "PROCESOS";
+      dueDate.value = activity.dueDate || addDays(2);
+      priority.value = activity.priority || "Media";
+      notes.value = activity.notes || "";
+      attachmentsDraft = activity.attachments || [];
+      if (activity.companyId) company.value = activity.companyId;
+      updateOwnerField();
+      formTitle.textContent = "Editar actividad";
+      submitActivityButton.textContent = "Guardar cambios";
+      renderPendingAttachments();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
     function setStatus(id, status) {
       const activity = activities.find(item => item.id === id);
@@ -846,7 +872,9 @@
             <select onchange="setStatus('${item.id}', this.value)">
               ${["Abierta", "En progreso", "En espera", "Cerrada"].map(s => `<option ${s === item.status ? "selected" : ""}>${s}</option>`).join("")}
             </select>
-            <button class="secondary" onclick="removeActivity('${item.id}')">Eliminar</button>
+            <button type="button" onclick="setStatus('${item.id}', 'Cerrada')">REALIZADO</button>
+            <button type="button" class="secondary" onclick="editActivity('${item.id}')">EDITAR</button>
+            <button type="button" class="secondary" onclick="removeActivity('${item.id}')">ELIMINAR</button>
           </div>
         </article>
       `).join("") : `<div class="empty">No hay actividades con esos filtros.</div>`;
