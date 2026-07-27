@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tareas AEE - Control de actividades</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f6f7f2;
+      color: #20251f;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    header {
+      background: #fbfcf7;
+      border-bottom: 1px solid #d7dccf;
+      padding: 24px;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+    .eyebrow {
+      color: #697260;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 8px 0; font-size: clamp(28px, 4vw, 42px); }
+    p { color: #5d6656; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      background: #253f2d;
+      color: white;
+      cursor: pointer;
+      font-weight: 800;
+      min-height: 42px;
+      padding: 10px 16px;
+    }
+    button.secondary {
+      background: white;
+      border: 1px solid #c9d0c0;
+      color: #4e5948;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .metric {
+      background: white;
+      border-left: 8px solid;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 82px;
+      padding: 16px;
+    }
+    .metric span { color: #596354; font-size: 13px; font-weight: 800; }
+    .metric strong { font-size: 34px; }
+    .critical { border-color: #c9382f !important; }
+    .risk { border-color: #e17824 !important; }
+    .watch { border-color: #d6aa1d !important; }
+    .ok { border-color: #3b8b54 !important; }
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 22px 24px;
+    }
+    .panel, .toolbar, .empty {
+      background: #fbfcf7;
+      border: 1px solid #d7dccf;
+      border-radius: 8px;
+      box-shadow: 0 12px 30px rgba(40, 52, 32, .06);
+      padding: 18px;
+    }
+    .panel + .panel { margin-top: 16px; }
+    h2 { font-size: 18px; margin: 0 0 14px; }
+    label { display: grid; gap: 7px; margin-bottom: 12px; }
+    label span {
+      color: #526049;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #c9d0c0;
+      border-radius: 8px;
+      min-height: 42px;
+      padding: 10px 12px;
+      font: inherit;
+    }
+    textarea { resize: vertical; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr 190px;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .card {
+      background: white;
+      border: 1px solid #d6dccf;
+      border-left: 8px solid #cdd3c7;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      padding: 16px;
+    }
+    .card.critical { background: #fff7f5; }
+    .card.risk { background: #fff9f2; }
+    .card.watch { background: #fffdf0; }
+    .card.closed { border-color: #9ca39a !important; background: #f3f4f1; opacity: .78; }
+    .card-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+    }
+    .card h3 { margin: 10px 0 4px; font-size: 19px; }
+    .pill {
+      border-radius: 999px;
+      display: inline-flex;
+      font-size: 12px;
+      font-weight: 800;
+      margin-right: 6px;
+      min-height: 26px;
+      padding: 5px 10px;
+    }
+    .pill.critical { background: #ffd9d4; color: #7a1712; }
+    .pill.risk { background: #ffe1c1; color: #7a3d00; }
+    .pill.watch { background: #ffefaa; color: #6e5400; }
+    .pill.ok { background: #d7f0dc; color: #1d5a31; }
+    .pill.neutral, .pill.closed { background: #e8ebe3; color: #43503c; }
+    .deadline {
+      background: rgba(255,255,255,.72);
+      border-radius: 8px;
+      min-width: 140px;
+      padding: 10px 12px;
+    }
+    .deadline strong { display: block; }
+    .deadline span { color: #68715f; font-size: 12px; }
+    .notes {
+      border-top: 1px solid #e4e8de;
+      margin-top: 12px;
+      padding-top: 12px;
+      font-size: 14px;
+    }
+    .attachment-box {
+      border: 1px dashed #b8c2ae;
+      border-radius: 8px;
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 12px;
+    }
+    .attachment-title {
+      color: #526049;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .attachment-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .file-button {
+      align-items: center;
+      background: white;
+      border: 1px solid #c9d0c0;
+      border-radius: 8px;
+      color: #283323;
+      cursor: pointer;
+      display: flex;
+      font-size: 13px;
+      font-weight: 800;
+      justify-content: center;
+      min-height: 42px;
+      padding: 9px 12px;
+      text-align: center;
+    }
+    .file-button input { display: none; }
+    .attachment-list, .saved-attachments ul {
+      display: grid;
+      gap: 8px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .attachment-list li, .saved-attachments li {
+      align-items: center;
+      background: rgba(255,255,255,.72);
+      border: 1px solid #e1e6da;
+      border-radius: 8px;
+      display: grid;
+      gap: 6px;
+      grid-template-columns: 1fr auto auto;
+      min-height: 38px;
+      padding: 8px 10px;
+    }
+    .attachment-list span, .saved-attachments span {
+      color: #263021;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+    .attachment-list small, .saved-attachments small {
+      color: #6a7462;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .attachment-list button {
+      background: transparent;
+      color: #7a2b25;
+      min-height: auto;
+      padding: 0;
+    }
+    .saved-attachments {
+      border-top: 1px solid #e4e8de;
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+    }
+    .saved-attachments strong { color: #3d4937; font-size: 13px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .actions select { max-width: 180px; }
+    .tabbar {
+      background: #fbfcf7;
+      border: 1px solid #d7dccf;
+      border-radius: 8px;
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      margin-bottom: 14px;
+    }
+    .tabbar button {
+      background: transparent;
+      color: #526049;
+      min-height: 38px;
+      padding: 8px 12px;
+    }
+    .tabbar button.active { background: #253f2d; color: white; }
+    .company-pill {
+      border-radius: 999px;
+      color: white;
+      display: inline-flex;
+      font-size: 12px;
+      font-weight: 800;
+      margin-right: 6px;
+      min-height: 26px;
+      padding: 5px 10px;
+    }
+    .history-layout { display: grid; gap: 14px; }
+    @media (min-width: 920px) { .history-layout { grid-template-columns: 260px 1fr; } }
+    .company-folders { display: grid; gap: 10px; }
+    .company-folder {
+      background: white;
+      border: 1px solid #d7dccf;
+      border-left: 8px solid #64748b;
+      border-radius: 8px;
+      color: #263021;
+      cursor: pointer;
+      display: grid;
+      gap: 4px;
+      padding: 12px;
+      text-align: left;
+    }
+    .company-folder.active { box-shadow: 0 0 0 3px rgba(37, 63, 45, .16); }
+    .company-folder span { color: #64705d; font-size: 12px; }
+    .company-create, .company-history-panel {
+      background: #fbfcf7;
+      border: 1px solid #d7dccf;
+      border-radius: 8px;
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+    .company-create strong, .company-history-panel h2 { color: #1d281b; margin: 0; }
+    .light-button {
+      background: white;
+      border: 1px solid #c9d0c0;
+      color: #34422e;
+    }
+    .login-screen {
+      align-items: center;
+      background: #f6f7f2;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 22px;
+    }
+    .login-card {
+      background: #fbfcf7;
+      border: 1px solid #d7dccf;
+      border-radius: 8px;
+      box-shadow: 0 24px 70px rgba(40, 52, 32, .12);
+      display: grid;
+      gap: 14px;
+      max-width: 520px;
+      padding: 26px;
+      width: 100%;
+    }
+    .login-card h1 { margin: 0; }
+    .login-card p { margin: 0; }
+    .login-error {
+      background: #fff0ed;
+      border: 1px solid #ffc9c2;
+      border-radius: 8px;
+      color: #8b2119;
+      display: none;
+      font-size: 14px;
+      padding: 10px 12px;
+    }
+    .login-help {
+      border-top: 1px solid #e0e5d8;
+      color: #5c6655;
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      line-height: 1.45;
+      padding-top: 12px;
+    }
+    .session-actions {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .session-actions span {
+      color: #526049;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .view-area-select {
+      min-height: 42px;
+      width: min(260px, 100%);
+    }
+    .legend { display: grid; gap: 8px; color: #53604d; font-size: 13px; }
+    .dot { border-radius: 50%; display: inline-block; height: 10px; margin-right: 8px; width: 10px; }
+    .dot.critical { background: #c9382f; }
+    .dot.risk { background: #e17824; }
+    .dot.watch { background: #d6aa1d; }
+    .dot.ok { background: #3b8b54; }
+    @media (max-width: 880px) {
+      main, .metrics, .toolbar, .card-head { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <section id="loginScreen" class="login-screen">
+    <form class="login-card" onsubmit="login(event)">
+      <div class="eyebrow">Tareas AEE</div>
+      <h1>Inicio de sesion</h1>
+      <p>Selecciona tu usuario. Segun el area asignada, el tablero abrira solo tus actividades.</p>
+      <label><span>Usuario</span><select id="loginUser"></select></label>
+      <label><span>PIN</span><input id="loginPin" type="password" placeholder="Ej. 1001"></label>
+      <div id="loginError" class="login-error">Usuario o PIN incorrecto.</div>
+      <button>Entrar</button>
+      <div class="login-help">
+        <strong>Usuarios</strong>
+        <span>Admin: 0000 | Perfiles 2025: Amaury Mesa, Maria Paula, Camila Daza</span>
+        <span>Perfiles 2026: Alejandra Valencia, Valentina Casas, Paula Bogota, Britney Cardenas, Paula Guevara</span>
+      </div>
+    </form>
+  </section>
+
+  <header id="siteHeader">
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <div class="eyebrow">Tareas AEE</div>
+          <h1>Control de actividades y alarmas</h1>
+          <p>Seguimiento rapido por responsable, vencimiento y criticidad. Al crear una actividad, el color se asigna automaticamente segun su fecha limite.</p>
+        </div>
+        <div class="session-actions">
+          <span id="sessionLabel"></span>
+          <select id="viewArea" class="view-area-select" onchange="render()" aria-label="Area visible"></select>
+          <button onclick="exportCsv()">Descargar CSV</button>
+          <button class="light-button" onclick="logout()">Salir</button>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric critical"><span>Criticas</span><strong id="totalCritical">0</strong></div>
+        <div class="metric risk"><span>Alto riesgo</span><strong id="totalRisk">0</strong></div>
+        <div class="metric watch"><span>Por vigilar</span><strong id="totalWatch">0</strong></div>
+        <div class="metric ok"><span>En tiempo</span><strong id="totalOk">0</strong></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="siteMain">
+    <aside>
+      <form class="panel" onsubmit="addActivity(event)">
+        <h2>Nueva actividad</h2>
+        <label><span>Actividad</span><input id="title" required placeholder="Ej. revisar respuesta"></label>
+        <div class="two">
+          <label><span>Area</span>
+            <select id="area" onchange="updateOwnerField()">
+              <option>PROCESOS</option>
+              <option>COOPLENEXUS</option>
+              <option>LIQUIDACIONES JD</option>
+              <option>IPNNC</option>
+              <option>EMPRESAS</option>
+              <option>1116</option>
+              <option>ADMINISTRATIVOS</option>
+              <option>PROGRAMACION</option>
+            </select>
+          </label>
+          <label><span>Responsable</span><input id="owner" readonly></label>
+        </div>
+        <label id="companyField"><span>Empresa</span><select id="company"></select></label>
+        <div class="two">
+          <label><span>Vence</span><input id="dueDate" type="date" required></label>
+          <label><span>Prioridad</span><select id="priority"><option>Alta</option><option selected>Media</option><option>Baja</option></select></label>
+        </div>
+        <label><span>Notas</span><textarea id="notes" rows="3"></textarea></label>
+        <div class="attachment-box">
+          <span class="attachment-title">Soportes</span>
+          <div class="attachment-buttons">
+            <label class="file-button">Subir archivos
+              <input id="fileInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg" onchange="addAttachments(this.files)">
+            </label>
+            <label class="file-button">Subir carpeta
+              <input id="folderInput" type="file" multiple onchange="addAttachments(this.files)">
+            </label>
+          </div>
+          <ul id="pendingAttachments" class="attachment-list"></ul>
+        </div>
+        <button style="width:100%">Agregar actividad</button>
+      </form>
+
+      <section class="panel">
+        <h2>Alarma automatica</h2>
+        <div class="legend">
+          <div><i class="dot critical"></i>Rojo: vencida o alta para hoy</div>
+          <div><i class="dot risk"></i>Naranja: riesgo alto</div>
+          <div><i class="dot watch"></i>Amarillo: proxima</div>
+          <div><i class="dot ok"></i>Verde: en tiempo</div>
+        </div>
+      </section>
+    </aside>
+
+    <section>
+      <div class="tabbar">
+        <button id="tabActivities" class="active" onclick="setTab('actividades')" type="button">Actividades</button>
+        <button id="tabHistory" onclick="setTab('historial')" type="button">Historial empresas</button>
+      </div>
+      <div id="activitiesPanel">
+        <div class="toolbar">
+          <input id="search" oninput="render()" placeholder="Buscar por actividad, area o responsable">
+          <select id="filter" onchange="render()">
+            <option>Todas</option><option>Critica</option><option>Alto riesgo</option><option>Vigilar</option>
+            <option>Abierta</option><option>En progreso</option><option>En espera</option><option>Cerrada</option>
+          </select>
+        </div>
+      </div>
+      <div id="list"></div>
+      <div id="historyPanel" style="display:none"></div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "mini-remedy-html-activities";
+    const SESSION_KEY = "mini-remedy-html-session";
+    const COMPANIES_KEY = "mini-remedy-html-companies";
+    const WARN_DAYS = 3;
+    const RISK_DAYS = 2;
+    const DEFAULT_COMPANIES = [
+      { id: "inserlog-sas", name: "INSERLOG S.A.S", color: "#2563eb" },
+      { id: "carvajal", name: "CARVAJAL", color: "#16a34a" },
+      { id: "push-designers-sas", name: "PUSH DESIGNERS S.A.S", color: "#dc2626" },
+      { id: "shalom", name: "SHALOM", color: "#9333ea" },
+      { id: "comcoal-toro-burger", name: "COMCOAL - TORO BURGER", color: "#ea580c" },
+      { id: "axis", name: "AXIS", color: "#0891b2" },
+      { id: "comerfar", name: "COMERFAR", color: "#4f46e5" },
+      { id: "sosmatic", name: "SOSMATIC", color: "#65a30d" },
+      { id: "tecnosalud-america-sas", name: "TECNOSALUD AMERICA S.A.S", color: "#be123c" },
+      { id: "cpven-ep-corp-sucursal", name: "CPVEN E&P CORP SUCURSAL", color: "#0f766e" },
+      { id: "mission", name: "MISSION", color: "#a16207" },
+      { id: "import-diseno-interiorismo", name: "IMPORT DISENO - INTERIORISIMO", color: "#7c3aed" },
+      { id: "novaderma", name: "NOVADERMA", color: "#db2777" },
+      { id: "pleniu-global-colombia-sas", name: "PLENIU GLOBAL COLOMBIA SAS", color: "#475569" }
+    ];
+    const USERS = [
+      { id: "admin", name: "Administrador", role: "Admin", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD", "IPNNC", "EMPRESAS", "1116", "ADMINISTRATIVOS", "PROGRAMACION"], pin: "0000" },
+      { id: "amaury-mesa", name: "Amaury Mesa", role: "Area", areas: ["EMPRESAS"], pin: "2025" },
+      { id: "maria-paula", name: "Maria Paula", role: "Area", areas: ["EMPRESAS"], pin: "2025" },
+      { id: "camila-daza", name: "Camila Daza", role: "Area", areas: ["EMPRESAS", "IPNNC"], pin: "2025" },
+      { id: "alejandra-valencia", name: "Alejandra Valencia", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "2026" },
+      { id: "valentina-casas", name: "Valentina Casas", role: "Area", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD"], pin: "2026" },
+      { id: "paula-bogota", name: "Paula Bogota", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "2026" },
+      { id: "britney-cardenas", name: "Britney Cardenas", role: "Area", areas: ["IPNNC"], pin: "2026" },
+      { id: "paula-guevara", name: "Paula Guevara", role: "Area", areas: ["IPNNC"], pin: "2026" }
+    ];
+    const dayMs = 24 * 60 * 60 * 1000;
+    let attachmentsDraft = [];
+    let currentUser = null;
+    let activeTab = "actividades";
+    let selectedCompanyId = DEFAULT_COMPANIES[0].id;
+    let companies = JSON.parse(localStorage.getItem(COMPANIES_KEY) || "null") || DEFAULT_COMPANIES;
+    if (companies.some(item => item.name === "Empresa 1")) {
+      companies = DEFAULT_COMPANIES;
+      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+    }
+    const addDays = (days) => {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      return date.toISOString().slice(0, 10);
+    };
+    let activities = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || [
+      { id: "1", title: "Radicar respuesta a requerimiento", area: "PROCESOS", owner: "Carolina", dueDate: addDays(-1), priority: "Alta", status: "En progreso", notes: "Falta validacion final de soportes." },
+      { id: "2", title: "Actualizar base de audiencias", area: "PROGRAMACION", owner: "Daniel", dueDate: addDays(1), priority: "Alta", status: "Abierta", notes: "Cruzar novedades del juzgado." },
+      { id: "3", title: "Enviar informe semanal al cliente", area: "EMPRESAS", owner: "Laura", dueDate: addDays(3), priority: "Media", status: "En espera", notes: "Pendiente aprobacion de cifras." },
+      { id: "4", title: "Revisar poderes nuevos", area: "ADMINISTRATIVOS", owner: "Andres", dueDate: addDays(8), priority: "Baja", status: "Abierta", notes: "Lote de documentos entrantes." }
+    ];
+    dueDate.value = addDays(2);
+    folderInput.setAttribute("webkitdirectory", "");
+    folderInput.setAttribute("directory", "");
+    loginUser.innerHTML = USERS.map(user => `<option value="${user.id}">${user.name}</option>`).join("");
+    loginUser.value = "amaury-mesa";
+    renderCompanyOptions();
+
+    function daysUntil(date) {
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const due = new Date(date + "T00:00:00");
+      return Math.ceil((due.getTime() - start.getTime()) / dayMs);
+    }
+    function classify(item) {
+      if (item.status === "Cerrada") return "closed";
+      const days = daysUntil(item.dueDate);
+      if (days < 0 || (days <= 0 && item.priority === "Alta")) return "critical";
+      if (days <= RISK_DAYS || (days <= WARN_DAYS && item.priority === "Alta")) return "risk";
+      if (days <= WARN_DAYS) return "watch";
+      return "ok";
+    }
+    function ownerForArea(areaName) {
+      return USERS.filter(item => item.role === "Area" && item.areas.includes(areaName)).map(item => item.name).join(" / ");
+    }
+    function companyById(id) {
+      return companies.find(item => item.id === id);
+    }
+    function saveCompanies() {
+      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+    }
+    function renderCompanyOptions() {
+      company.innerHTML = companies.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("");
+      if (!company.value && companies[0]) company.value = companies[0].id;
+    }
+    function setTab(tab) {
+      activeTab = tab;
+      tabActivities.className = tab === "actividades" ? "active" : "";
+      tabHistory.className = tab === "historial" ? "active" : "";
+      activitiesPanel.style.display = tab === "actividades" ? "block" : "none";
+      list.style.display = tab === "actividades" ? "block" : "none";
+      historyPanel.style.display = tab === "historial" ? "block" : "none";
+      render();
+    }
+    function login(event) {
+      event.preventDefault();
+      const user = USERS.find(item => item.id === loginUser.value);
+      if (!user || user.pin !== loginPin.value.trim()) {
+        loginError.style.display = "block";
+        return;
+      }
+      currentUser = user;
+      localStorage.setItem(SESSION_KEY, user.id);
+      loginPin.value = "";
+      loginError.style.display = "none";
+      applySession();
+    }
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem(SESSION_KEY);
+      applySession();
+    }
+    function applySession() {
+      const isLoggedIn = Boolean(currentUser);
+      loginScreen.style.display = isLoggedIn ? "none" : "flex";
+      siteHeader.style.display = isLoggedIn ? "block" : "none";
+      siteMain.style.display = isLoggedIn ? "grid" : "none";
+      if (!isLoggedIn) return;
+      sessionLabel.textContent = currentUser.name;
+      const viewAreas = currentUser.role === "Admin" ? currentUser.areas : currentUser.areas;
+      viewArea.innerHTML = `<option value="Todas">Todas mis areas</option>` + viewAreas.map(item => `<option value="${item}">${item}</option>`).join("");
+      viewArea.style.display = currentUser.role === "Admin" || currentUser.areas.length > 1 ? "block" : "none";
+      Array.from(area.options).forEach(option => {
+        option.hidden = currentUser.role !== "Admin" && !currentUser.areas.includes(option.value);
+      });
+      area.disabled = currentUser.role !== "Admin" && currentUser.areas.length === 1;
+      area.value = currentUser.role === "Admin" ? "PROCESOS" : currentUser.areas[0];
+      updateOwnerField();
+      render();
+    }
+    function updateOwnerField() {
+      owner.value = currentUser && currentUser.role !== "Admin" ? currentUser.name : ownerForArea(area.value);
+      companyField.style.display = area.value === "EMPRESAS" ? "grid" : "none";
+    }
+    const labels = {
+      critical: "Critica",
+      risk: "Alto riesgo",
+      watch: "Vigilar",
+      ok: "En tiempo",
+      closed: "Cerrada"
+    };
+    const rank = { critical: 0, risk: 1, watch: 2, ok: 3, closed: 4 };
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+    }
+    function addAttachments(files) {
+      if (!files || !files.length) return;
+      attachmentsDraft = attachmentsDraft.concat(Array.from(files).map(file => ({
+        id: crypto.randomUUID(),
+        name: file.name,
+        size: file.size,
+        type: file.type || "Archivo",
+        path: file.webkitRelativePath || ""
+      })));
+      fileInput.value = "";
+      folderInput.value = "";
+      renderPendingAttachments();
+    }
+    function removePendingAttachment(id) {
+      attachmentsDraft = attachmentsDraft.filter(file => file.id !== id);
+      renderPendingAttachments();
+    }
+    function renderPendingAttachments() {
+      pendingAttachments.innerHTML = attachmentsDraft.map(file => `
+        <li>
+          <span>${escapeHtml(file.path || file.name)}</span>
+          <small>${formatFileSize(file.size)}</small>
+          <button type="button" onclick="removePendingAttachment('${file.id}')">Quitar</button>
+        </li>
+      `).join("");
+    }
+    function addActivity(event) {
+      event.preventDefault();
+      if (!currentUser) return;
+      const selectedArea = area.value;
+      activities.unshift({
+        id: crypto.randomUUID(),
+        title: title.value,
+        area: selectedArea,
+        owner: currentUser.role === "Admin" ? ownerForArea(selectedArea) : currentUser.name,
+        companyId: selectedArea === "EMPRESAS" ? company.value : "",
+        dueDate: dueDate.value,
+        priority: priority.value,
+        status: "Abierta",
+        notes: notes.value,
+        attachments: attachmentsDraft
+      });
+      attachmentsDraft = [];
+      event.target.reset();
+      area.value = currentUser.role === "Admin" ? "PROCESOS" : currentUser.areas[0];
+      updateOwnerField();
+      dueDate.value = addDays(2);
+      priority.value = "Media";
+      renderPendingAttachments();
+      save();
+      render();
+    }
+    function setStatus(id, status) {
+      const activity = activities.find(item => item.id === id);
+      activities = activities.map(item => item.id === id ? { ...item, status } : item);
+      save();
+      if (status === "Cerrada" && activity && activity.area === "EMPRESAS" && activity.companyId) {
+        selectedCompanyId = activity.companyId;
+        viewArea.value = "EMPRESAS";
+        setTab("historial");
+        return;
+      }
+      render();
+    }
+    function removeActivity(id) {
+      activities = activities.filter(item => item.id !== id);
+      save();
+      render();
+    }
+    function addCompany(event) {
+      event.preventDefault();
+      const name = newCompanyName.value.trim();
+      if (!name) return;
+      const newCompany = { id: crypto.randomUUID(), name, color: newCompanyColor.value };
+      companies.push(newCompany);
+      selectedCompanyId = newCompany.id;
+      newCompanyName.value = "";
+      saveCompanies();
+      renderCompanyOptions();
+      render();
+    }
+    function exportCsv() {
+      const rows = scoped().map(item => [item.title, item.area, companyById(item.companyId)?.name || "", item.owner, item.dueDate, item.priority, item.status, labels[item.risk], item.days, item.notes, (item.attachments || []).map(file => file.path || file.name).join(" | ")]);
+      const csv = [["Actividad","Area","Empresa","Responsable","Vence","Prioridad","Estado","Alerta","Dias","Notas","Adjuntos"], ...rows]
+        .map(row => row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "actividades-remedy.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+    function enriched() {
+      return activities.map(item => ({ ...item, days: daysUntil(item.dueDate), risk: classify(item) }))
+        .sort((a, b) => rank[a.risk] - rank[b.risk] || a.days - b.days);
+    }
+    function scoped() {
+      return enriched().filter(item => currentUser && (currentUser.role === "Admin" || currentUser.areas.includes(item.area)));
+    }
+    function render() {
+      if (!currentUser) return;
+      const data = scoped().filter(item => viewArea.value === "Todas" || item.area === viewArea.value);
+      totalCritical.textContent = data.filter(x => x.risk === "critical").length;
+      totalRisk.textContent = data.filter(x => x.risk === "risk").length;
+      totalWatch.textContent = data.filter(x => x.risk === "watch").length;
+      totalOk.textContent = data.filter(x => x.risk === "ok").length;
+      const q = search.value.toLowerCase();
+      const f = filter.value;
+      const visible = data.filter(item => {
+        const text = `${item.title} ${item.area} ${item.owner}`.toLowerCase();
+        return text.includes(q) && (f === "Todas" || labels[item.risk] === f || item.status === f);
+      });
+      list.innerHTML = visible.length ? visible.map(item => `
+        <article class="card ${item.risk}">
+          <div class="card-head">
+            <div>
+              <span class="pill ${item.risk}">${labels[item.risk]}</span>
+              <span class="pill neutral">${item.priority}</span>
+              ${item.companyId && companyById(item.companyId) ? `<span class="company-pill" style="background:${companyById(item.companyId).color}">${escapeHtml(companyById(item.companyId).name)}</span>` : ""}
+              <h3>${escapeHtml(item.title)}</h3>
+              <p>${escapeHtml(item.area)} | Responsable: ${escapeHtml(item.owner)}</p>
+            </div>
+            <div class="deadline">
+              <strong>${item.days < 0 ? Math.abs(item.days) + " dias vencida" : item.days === 0 ? "Vence hoy" : item.days + " dias"}</strong>
+              <span>${item.dueDate}</span>
+            </div>
+          </div>
+          <p class="notes">${escapeHtml(item.notes || "Sin observaciones.")}</p>
+          ${(item.attachments || []).length ? `
+            <div class="saved-attachments">
+              <strong>Soportes adjuntos</strong>
+              <ul>
+                ${(item.attachments || []).map(file => `
+                  <li>
+                    <span>${escapeHtml(file.path || file.name)}</span>
+                    <small>${formatFileSize(file.size)}</small>
+                  </li>
+                `).join("")}
+              </ul>
+            </div>
+          ` : ""}
+          <div class="actions">
+            <select onchange="setStatus('${item.id}', this.value)">
+              ${["Abierta", "En progreso", "En espera", "Cerrada"].map(s => `<option ${s === item.status ? "selected" : ""}>${s}</option>`).join("")}
+            </select>
+            <button class="secondary" onclick="removeActivity('${item.id}')">Eliminar</button>
+          </div>
+        </article>
+      `).join("") : `<div class="empty">No hay actividades con esos filtros.</div>`;
+      renderHistory();
+    }
+    function renderHistory() {
+      const closed = scoped().filter(item => item.area === "EMPRESAS" && item.status === "Cerrada" && item.companyId);
+      const selectedCompany = companyById(selectedCompanyId) || companies[0];
+      const selectedActivities = closed.filter(item => item.companyId === (selectedCompany && selectedCompany.id));
+      historyPanel.innerHTML = `
+        <div class="history-layout">
+          <section class="company-folders">
+            ${companies.map(item => {
+              const count = closed.filter(activity => activity.companyId === item.id).length;
+              return `<button type="button" class="company-folder ${selectedCompanyId === item.id ? "active" : ""}" style="border-left-color:${item.color}" onclick="selectedCompanyId='${item.id}'; renderHistory()">
+                <strong>${escapeHtml(item.name)}</strong>
+                <span>${count} cerradas</span>
+              </button>`;
+            }).join("")}
+            <form class="company-create" onsubmit="addCompany(event)">
+              <strong>Nueva empresa</strong>
+              <input id="newCompanyName" placeholder="Nombre de empresa">
+              <input id="newCompanyColor" type="color" value="#2563eb" aria-label="Color de empresa">
+              <button type="submit">Crear carpeta</button>
+            </form>
+          </section>
+          <section class="company-history-panel">
+            <h2>${escapeHtml(selectedCompany ? selectedCompany.name : "Empresa")}</h2>
+            ${selectedActivities.length ? selectedActivities.map(item => `
+              <article class="card ${item.risk}">
+                <div class="card-head">
+                  <div>
+                    <span class="pill closed">Cerrada</span>
+                    <span class="company-pill" style="background:${selectedCompany.color}">${escapeHtml(selectedCompany.name)}</span>
+                    <h3>${escapeHtml(item.title)}</h3>
+                    <p>${escapeHtml(item.area)} | Responsable: ${escapeHtml(item.owner)}</p>
+                  </div>
+                  <div class="deadline"><strong>Finalizada</strong><span>${item.dueDate}</span></div>
+                </div>
+                <p class="notes">${escapeHtml(item.notes || "Sin observaciones.")}</p>
+              </article>
+            `).join("") : `<div class="empty">Esta carpeta aun no tiene actividades cerradas.</div>`}
+          </section>
+        </div>
+      `;
+    }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    }
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+    const savedSession = localStorage.getItem(SESSION_KEY);
+    currentUser = USERS.find(user => user.id === savedSession) || null;
+    applySession();
+  </script>
+</body>
+</html>
