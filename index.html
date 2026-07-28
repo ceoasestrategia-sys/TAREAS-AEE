@@ -451,7 +451,7 @@
     <section>
       <div class="tabbar">
         <button id="tabActivities" class="active" onclick="setTab('actividades')" type="button">Actividades</button>
-        <button id="tabHistory" onclick="setTab('historial')" type="button">Historial empresas</button>
+        <button id="tabHistory" onclick="setTab('historial')" type="button">Historial realizados</button>
       </div>
       <div id="activitiesPanel">
         <div class="toolbar">
@@ -486,6 +486,7 @@
       { id: "tecnosalud-america-sas", name: "TECNOSALUD AMERICA S.A.S", color: "#be123c" },
       { id: "cpven-ep-corp-sucursal", name: "CPVEN E&P CORP SUCURSAL", color: "#0f766e" },
       { id: "mission", name: "MISSION", color: "#a16207" },
+      { id: "vantage", name: "VANTAGE", color: "#0369a1" },
       { id: "import-diseno-interiorismo", name: "IMPORT DISENO - INTERIORISIMO", color: "#7c3aed" },
       { id: "novaderma", name: "NOVADERMA", color: "#db2777" },
       { id: "pleniu-global-colombia-sas", name: "PLENIU GLOBAL COLOMBIA SAS", color: "#475569" }
@@ -508,11 +509,13 @@
     let currentUser = null;
     let activeTab = "actividades";
     let selectedCompanyId = DEFAULT_COMPANIES[0].id;
+    let selectedHistoryKey = `EMPRESAS::${DEFAULT_COMPANIES[0].id}`;
     let companies = JSON.parse(localStorage.getItem(COMPANIES_KEY) || "null") || DEFAULT_COMPANIES;
     if (companies.some(item => item.name === "Empresa 1")) {
       companies = DEFAULT_COMPANIES;
       localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
     }
+    companies = mergeCompanies(companies);
     const addDays = (days) => {
       const date = new Date();
       date.setDate(date.getDate() + days);
@@ -560,9 +563,19 @@
     function companyById(id) {
       return companies.find(item => item.id === id);
     }
+    function areaCompanies(areaName) {
+      if (areaName === "LIQUIDACIONES JD" || areaName === "IPNNC") {
+        return companies.filter(item => ["mission", "vantage"].includes(item.id));
+      }
+      if (areaName === "EMPRESAS") {
+        return companies.filter(item => item.id !== "vantage");
+      }
+      return [];
+    }
     function renderCompanyOptions() {
-      company.innerHTML = companies.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("");
-      if (!company.value && companies[0]) company.value = companies[0].id;
+      const availableCompanies = areaCompanies(area.value);
+      company.innerHTML = availableCompanies.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("");
+      if (!availableCompanies.some(item => item.id === company.value) && availableCompanies[0]) company.value = availableCompanies[0].id;
     }
     function setTab(tab) {
       activeTab = tab;
@@ -612,7 +625,8 @@
     }
     function updateOwnerField() {
       owner.value = ownerForAssignment(area.value);
-      companyField.style.display = area.value === "EMPRESAS" ? "grid" : "none";
+      renderCompanyOptions();
+      companyField.style.display = areaCompanies(area.value).length ? "grid" : "none";
     }
     const labels = {
       critical: "Critica",
@@ -649,6 +663,7 @@
       return jsonp(GOOGLE_SHEETS_API_URL).then(data => {
         if (Array.isArray(data.empresas) && data.empresas.length) {
           companies = data.empresas.map(normalizeCompany);
+          companies = mergeCompanies(companies);
           selectedCompanyId = companies[0]?.id || selectedCompanyId;
           localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
           renderCompanyOptions();
@@ -683,6 +698,13 @@
         name: item.name || "Empresa",
         color: item.color || "#2563eb"
       };
+    }
+    function mergeCompanies(items) {
+      const merged = [...items];
+      DEFAULT_COMPANIES.forEach(defaultCompany => {
+        if (!merged.some(item => item.id === defaultCompany.id)) merged.push(defaultCompany);
+      });
+      return merged;
     }
     function normalizeActivity(item) {
       return {
@@ -731,12 +753,13 @@
       event.preventDefault();
       if (!currentUser) return;
       const selectedArea = area.value;
+      const availableCompanies = areaCompanies(selectedArea);
       const nextActivity = {
         id: editingActivityId || crypto.randomUUID(),
         title: title.value,
         area: selectedArea,
         owner: ownerForAssignment(selectedArea),
-        companyId: selectedArea === "EMPRESAS" ? company.value : "",
+        companyId: availableCompanies.length ? company.value : "",
         dueDate: dueDate.value,
         priority: priority.value,
         status: editingActivityId ? (activities.find(item => item.id === editingActivityId)?.status || "Abierta") : "Abierta",
@@ -782,9 +805,10 @@
       const activity = activities.find(item => item.id === id);
       activities = activities.map(item => item.id === id ? { ...item, status } : item);
       save();
-      if (status === "Cerrada" && activity && activity.area === "EMPRESAS" && activity.companyId) {
+      if (status === "Cerrada" && activity) {
         selectedCompanyId = activity.companyId;
-        viewArea.value = "EMPRESAS";
+        selectedHistoryKey = historyKey(activity);
+        viewArea.value = activity.area;
         setTab("historial");
         return;
       }
@@ -881,16 +905,18 @@
       renderHistory();
     }
     function renderHistory() {
-      const closed = scoped().filter(item => item.area === "EMPRESAS" && item.status === "Cerrada" && item.companyId);
-      const selectedCompany = companyById(selectedCompanyId) || companies[0];
-      const selectedActivities = closed.filter(item => item.companyId === (selectedCompany && selectedCompany.id));
+      const closed = scoped().filter(item => item.status === "Cerrada");
+      const folders = historyFolders(closed);
+      if (!folders.some(folder => folder.key === selectedHistoryKey) && folders[0]) selectedHistoryKey = folders[0].key;
+      const selectedFolder = folders.find(folder => folder.key === selectedHistoryKey) || folders[0];
+      const selectedActivities = selectedFolder ? closed.filter(item => historyKey(item) === selectedFolder.key) : [];
       historyPanel.innerHTML = `
         <div class="history-layout">
           <section class="company-folders">
-            ${companies.map(item => {
-              const count = closed.filter(activity => activity.companyId === item.id).length;
-              return `<button type="button" class="company-folder ${selectedCompanyId === item.id ? "active" : ""}" style="border-left-color:${item.color}" onclick="selectedCompanyId='${item.id}'; renderHistory()">
-                <strong>${escapeHtml(item.name)}</strong>
+            ${folders.map(folder => {
+              const count = closed.filter(activity => historyKey(activity) === folder.key).length;
+              return `<button type="button" class="company-folder ${selectedHistoryKey === folder.key ? "active" : ""}" style="border-left-color:${folder.color}" onclick="selectedHistoryKey='${folder.key}'; renderHistory()">
+                <strong>${escapeHtml(folder.label)}</strong>
                 <span>${count} cerradas</span>
               </button>`;
             }).join("")}
@@ -902,13 +928,13 @@
             </form>
           </section>
           <section class="company-history-panel">
-            <h2>${escapeHtml(selectedCompany ? selectedCompany.name : "Empresa")}</h2>
+            <h2>${escapeHtml(selectedFolder ? selectedFolder.label : "Historial")}</h2>
             ${selectedActivities.length ? selectedActivities.map(item => `
               <article class="card ${item.risk}">
                 <div class="card-head">
                   <div>
                     <span class="pill closed">Cerrada</span>
-                    <span class="company-pill" style="background:${selectedCompany.color}">${escapeHtml(selectedCompany.name)}</span>
+                    ${item.companyId && companyById(item.companyId) ? `<span class="company-pill" style="background:${companyById(item.companyId).color}">${escapeHtml(companyById(item.companyId).name)}</span>` : `<span class="pill neutral">${escapeHtml(item.area)}</span>`}
                     <h3>${escapeHtml(item.title)}</h3>
                     <p>${escapeHtml(item.area)} | Responsable: ${escapeHtml(item.owner)}</p>
                   </div>
@@ -920,6 +946,22 @@
           </section>
         </div>
       `;
+    }
+    function historyKey(item) {
+      return item.companyId ? `${item.area}::${item.companyId}` : `${item.area}::sin-empresa`;
+    }
+    function historyFolders(closedActivities) {
+      const base = [
+        ...areaCompanies("EMPRESAS").map(item => ({ key: `EMPRESAS::${item.id}`, label: item.name, color: item.color })),
+        { key: "PROCESOS::sin-empresa", label: "PROCESOS", color: "#475569" },
+        ...areaCompanies("LIQUIDACIONES JD").map(item => ({ key: `LIQUIDACIONES JD::${item.id}`, label: `LIQUIDACIONES JD - ${item.name}`, color: item.color })),
+        ...areaCompanies("IPNNC").map(item => ({ key: `IPNNC::${item.id}`, label: `IPNNC - ${item.name}`, color: item.color })),
+        { key: "PROGRAMACION::sin-empresa", label: "PROGRAMACION", color: "#0f766e" }
+      ];
+      const extras = closedActivities
+        .filter(item => !base.some(folder => folder.key === historyKey(item)))
+        .map(item => ({ key: historyKey(item), label: item.companyId && companyById(item.companyId) ? `${item.area} - ${companyById(item.companyId).name}` : item.area, color: companyById(item.companyId)?.color || "#6b7280" }));
+      return [...base, ...extras].filter((folder, index, all) => all.findIndex(item => item.key === folder.key) === index);
     }
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
