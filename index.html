@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -1295,8 +1295,8 @@
         <span class="login-accent" aria-hidden="true"></span>
       </div>
       <div class="login-copy">
-        <h1>Inicio de sesión</h1>
-        <p>Selecciona tu usuario. Según el área asignada,<br>el tablero abrirá solo tus actividades.</p>
+        <h1>Inicio de sesiÃ³n</h1>
+        <p>Selecciona tu usuario. SegÃºn el Ã¡rea asignada,<br>el tablero abrirÃ¡ solo tus actividades.</p>
       </div>
       <label><span>Usuario</span><select id="loginUser"></select></label>
       <label><span>PIN</span><input id="loginPin" type="password" placeholder="Ej. 1001"></label>
@@ -1326,8 +1326,8 @@
       <div class="top">
         <div class="brand-title">
           <span class="brand-mark">D</span>
-          <h1 id="welcomeTitle">¡Bienvenido!</h1>
-          <p class="banner-subtitle">Aquí puedes gestionar y controlar todas tus actividades de gestión.</p>
+          <h1 id="welcomeTitle">Â¡Bienvenido!</h1>
+          <p class="banner-subtitle">AquÃ­ puedes gestionar y controlar todas tus actividades de gestiÃ³n.</p>
         </div>
         <div class="session-actions">
           <button onclick="exportCsv()">Descargar CSV</button>
@@ -1532,7 +1532,7 @@
       { id: "maria-paula", name: "Maria Paula", role: "Area", areas: ["EMPRESAS"], pin: "8644" },
       { id: "camila-daza", name: "Camila Daza", role: "Area", areas: ["EMPRESAS", "IPNNC"], pin: "2708" },
       { id: "alejandra-valencia", name: "Alejandra Valencia", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "2654" },
-      { id: "valentina-casas", name: "Valentina Casas", role: "Area", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD"], pin: "0476" },
+      { id: "valentina-casas", name: "Valentina Casas", role: "Area", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD", "LIQUIDADORA", "COORDINACION"], pin: "0476" },
       { id: "paula-bogota", name: "Paula Bogota", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "6877" },
       { id: "britney-cardenas", name: "Britney Cardenas", role: "Area", areas: ["IPNNC"], pin: "2660" },
       { id: "paula-guevara", name: "Paula Guevara", role: "Area", areas: ["IPNNC"], pin: "5090" },
@@ -1697,7 +1697,7 @@
       document.body.classList.remove("app-booting");
       if (!isLoggedIn) return;
       sessionLabel.textContent = currentUser.name;
-      welcomeTitle.textContent = `¡Bienvenido, ${currentUser.name.split(" ")[0]}!`;
+      welcomeTitle.textContent = `Â¡Bienvenido, ${currentUser.name.split(" ")[0]}!`;
       sessionAreaLabel.textContent = currentUser.role === "Admin" ? "Administrador | Todas las areas" : currentUser.areas.join(" | ");
       profileInitials.textContent = currentUser.name.split(" ").map(part => part[0]).join("").slice(0, 2).toUpperCase();
       const viewAreas = currentUser.role === "Admin" ? currentUser.areas : currentUser.areas;
@@ -2449,3 +2449,4 @@
   </script>
 </body>
 </html>
+
