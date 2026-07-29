@@ -2283,6 +2283,11 @@
       }
       render();
     }
+    function reopenActivity(id) {
+      activities = activities.map(item => item.id === id ? { ...item, status: "Abierta" } : item);
+      save();
+      setTab("actividades");
+    }
     function removeActivity(id) {
       activities = activities.filter(item => item.id !== id);
       save();
@@ -2327,15 +2332,16 @@
       } else if (currentUser.role === "Admin" && activeTab === "actividades") {
         data = data.filter(item => item.owner !== currentUser.name);
       }
-      totalCritical.textContent = data.filter(x => x.risk === "critical").length;
-      totalRisk.textContent = data.filter(x => x.risk === "risk").length;
-      totalWatch.textContent = data.filter(x => x.risk === "watch").length;
-      totalOk.textContent = data.filter(x => x.risk === "ok").length;
+      const activeData = data.filter(item => item.status !== "Cerrada");
+      totalCritical.textContent = activeData.filter(x => x.risk === "critical").length;
+      totalRisk.textContent = activeData.filter(x => x.risk === "risk").length;
+      totalWatch.textContent = activeData.filter(x => x.risk === "watch").length;
+      totalOk.textContent = activeData.filter(x => x.risk === "ok").length;
       renderAlerts();
       renderNotifications();
       const q = search.value.toLowerCase();
       const f = filter.value;
-      const visible = data.filter(item => {
+      const visible = activeData.filter(item => {
         const text = `${item.title} ${item.area} ${item.owner}`.toLowerCase();
         return text.includes(q) && (f === "Todas" || labels[item.risk] === f || item.status === f);
       });
@@ -2419,6 +2425,10 @@
                   <div class="deadline"><strong>Finalizada</strong><span>${formatDue(item)}</span></div>
                 </div>
                 <p class="notes">${escapeHtml(item.notes || "Sin observaciones.")}</p>
+                <div class="actions">
+                  <button type="button" onclick="reopenActivity('${item.id}')">REABRIR</button>
+                  <button type="button" class="secondary" onclick="editActivity('${item.id}')">EDITAR</button>
+                </div>
               </article>
             `).join("") : `<div class="empty">Esta carpeta aun no tiene actividades cerradas.</div>`}
           </section>
