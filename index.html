@@ -1295,8 +1295,8 @@
         <span class="login-accent" aria-hidden="true"></span>
       </div>
       <div class="login-copy">
-        <h1>Inicio de sesiÃ³n</h1>
-        <p>Selecciona tu usuario. SegÃºn el Ã¡rea asignada,<br>el tablero abrirÃ¡ solo tus actividades.</p>
+        <h1>Inicio de sesión</h1>
+        <p>Selecciona tu usuario. Según el área asignada,<br>el tablero abrirá solo tus actividades.</p>
       </div>
       <label><span>Usuario</span><select id="loginUser"></select></label>
       <label><span>PIN</span><input id="loginPin" type="password" placeholder="Ej. 1001"></label>
@@ -1326,8 +1326,8 @@
       <div class="top">
         <div class="brand-title">
           <span class="brand-mark">D</span>
-          <h1 id="welcomeTitle">Â¡Bienvenido!</h1>
-          <p class="banner-subtitle">AquÃ­ puedes gestionar y controlar todas tus actividades de gestiÃ³n.</p>
+          <h1 id="welcomeTitle">¡Bienvenido!</h1>
+          <p class="banner-subtitle">Aquí puedes gestionar y controlar todas tus actividades de gestión.</p>
         </div>
         <div class="session-actions">
           <button onclick="exportCsv()">Descargar CSV</button>
@@ -1385,6 +1385,8 @@
               <option>1116</option>
               <option>ADMINISTRATIVOS</option>
               <option>PROGRAMACION</option>
+              <option>LIQUIDADORA</option>
+              <option>COORDINACION</option>
             </select>
           </label>
           <label><span>Responsable</span><select id="owner"></select></label>
@@ -1507,7 +1509,9 @@
       "EMPRESAS": "#dc2626",
       "1116": "#0891b2",
       "ADMINISTRATIVOS": "#475569",
-      "PROGRAMACION": "#0f766e"
+      "PROGRAMACION": "#0f766e",
+      "LIQUIDADORA": "#be185d",
+      "COORDINACION": "#7c3aed"
     };
     const DEFAULT_COMPANIES = [
       { id: "inserlog-sas", name: "INSERLOG S.A.S", color: "#2563eb" },
@@ -1527,7 +1531,7 @@
       { id: "pleniu-global-colombia-sas", name: "PLENIU GLOBAL COLOMBIA SAS", color: "#475569" }
     ];
     const USERS = [
-      { id: "admin", name: "Administrador", role: "Admin", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD", "IPNNC", "EMPRESAS", "1116", "ADMINISTRATIVOS", "PROGRAMACION"], pin: "0000" },
+      { id: "admin", name: "Administrador", role: "Admin", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD", "IPNNC", "EMPRESAS", "1116", "ADMINISTRATIVOS", "PROGRAMACION", "LIQUIDADORA", "COORDINACION"], pin: "0000" },
       { id: "amaury-mesa", name: "Amaury Mesa", role: "Area", areas: ["EMPRESAS"], pin: "5132" },
       { id: "maria-paula", name: "Maria Paula", role: "Area", areas: ["EMPRESAS"], pin: "8644" },
       { id: "camila-daza", name: "Camila Daza", role: "Area", areas: ["EMPRESAS", "IPNNC"], pin: "2708" },
@@ -1697,7 +1701,7 @@
       document.body.classList.remove("app-booting");
       if (!isLoggedIn) return;
       sessionLabel.textContent = currentUser.name;
-      welcomeTitle.textContent = `Â¡Bienvenido, ${currentUser.name.split(" ")[0]}!`;
+      welcomeTitle.textContent = `¡Bienvenido, ${currentUser.name.split(" ")[0]}!`;
       sessionAreaLabel.textContent = currentUser.role === "Admin" ? "Administrador | Todas las areas" : currentUser.areas.join(" | ");
       profileInitials.textContent = currentUser.name.split(" ").map(part => part[0]).join("").slice(0, 2).toUpperCase();
       const viewAreas = currentUser.role === "Admin" ? currentUser.areas : currentUser.areas;
