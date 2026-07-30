@@ -522,9 +522,15 @@
       border-radius: 8px;
       display: grid;
       gap: 6px;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto;
       min-height: 38px;
       padding: 8px 10px;
+    }
+    .attachment-list li { grid-template-columns: 1fr auto auto; }
+    .saved-attachments li { grid-template-columns: 1fr auto; }
+    .attachment-action {
+      grid-column: 1 / -1;
+      justify-self: start;
     }
     .attachment-list span, .saved-attachments span {
       color: #263021;
@@ -2162,13 +2168,18 @@
         <div class="saved-attachments">
           <strong>Soportes adjuntos</strong>
           <ul>
-            ${(files || []).map(file => `
+            ${(files || []).map(file => {
+              const href = file.dataUrl || file.url || file.data || "";
+              return `
               <li>
                 <span>${escapeHtml(file.path || file.name)}</span>
                 <small>${formatFileSize(file.size)}</small>
-                ${file.dataUrl ? `<a class="download-link" href="${file.dataUrl}" download="${escapeHtml(file.name || "soporte")}">Descargar</a>` : `<span class="download-link muted">Sin descarga</span>`}
+                <div class="attachment-action">
+                  ${href ? `<a class="download-link" href="${href}" download="${escapeHtml(file.name || "soporte")}">Descargar soporte</a>` : `<span class="download-link muted">Archivo no disponible para descarga</span>`}
+                </div>
               </li>
-            `).join("")}
+            `;
+            }).join("")}
           </ul>
         </div>
       `;
