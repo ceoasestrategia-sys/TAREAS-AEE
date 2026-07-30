@@ -1836,7 +1836,7 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
           action: "saveAll",
-          tareas: activities,
+          tareas: activities.map(serializeActivityForRemote),
           usuarios: USERS,
           empresas: companies
         })
@@ -1914,6 +1914,20 @@
       });
       return [...merged.values()].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
     }
+    function stripAssignmentMeta(notes) {
+      return String(notes || "").replace(/^\[\[ASIGNADO_POR:[^\]]+\]\]\n?/, "");
+    }
+    function extractAssignedBy(item) {
+      const meta = String(item.notes || "").match(/^\[\[ASIGNADO_POR:([^\]]+)\]\]/);
+      return item.assignedBy || item.createdBy || (meta ? meta[1] : "");
+    }
+    function serializeActivityForRemote(item) {
+      const cleanNotes = stripAssignmentMeta(item.notes);
+      return {
+        ...item,
+        notes: item.assignedBy ? `[[ASIGNADO_POR:${item.assignedBy}]]\n${cleanNotes}` : cleanNotes
+      };
+    }
     function normalizeActivity(item) {
       const isCalendar = item.kind === "calendar" || item.status === "Calendario";
       return {
@@ -1928,8 +1942,8 @@
         priority: item.priority || "Media",
         status: isCalendar ? "Calendario" : (item.status || "Abierta"),
         kind: isCalendar ? "calendar" : (item.kind || "task"),
-        assignedBy: item.assignedBy || item.createdBy || "",
-        notes: item.notes || "",
+        assignedBy: extractAssignedBy(item),
+        notes: stripAssignmentMeta(item.notes),
         alertMode: item.alertMode || "Sonido y visual",
         attachments: Array.isArray(item.attachments) ? item.attachments : [],
         updatedAt: item.updatedAt || new Date().toISOString()
