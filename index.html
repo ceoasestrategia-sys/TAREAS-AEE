@@ -1547,6 +1547,7 @@
     let attachmentsDraft = [];
     let editingActivityId = null;
     let remoteLoaded = false;
+    let pendingRemoteSync = false;
     let audioEnabled = false;
     let alarmAudioContext = null;
     let alarmTimers = [];
@@ -1752,9 +1753,11 @@
     function syncToGoogleSheets() {
       if (!GOOGLE_SHEETS_API_URL) return;
       if (!remoteLoaded) {
+        pendingRemoteSync = true;
         console.warn("No se sincroniza: primero debe cargar Google Sheets.");
         return;
       }
+      pendingRemoteSync = false;
       localStorage.setItem(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), activities, companies }));
       fetch(GOOGLE_SHEETS_API_URL, {
         method: "POST",
@@ -1771,19 +1774,28 @@
     function loadFromGoogleSheets() {
       if (!GOOGLE_SHEETS_API_URL) return Promise.resolve();
       return jsonp(GOOGLE_SHEETS_API_URL).then(data => {
-        localStorage.setItem(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), activities, companies }));
+        const storedActivities = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        const storedCompanies = JSON.parse(localStorage.getItem(COMPANIES_KEY) || "[]");
+        const localActivities = Array.isArray(storedActivities) ? storedActivities.map(normalizeActivity) : [];
+        const localCompanies = Array.isArray(storedCompanies) ? storedCompanies.map(normalizeCompany) : [];
+        localStorage.setItem(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), activities: localActivities, companies: localCompanies }));
         if (Array.isArray(data.empresas) && data.empresas.length) {
-          companies = data.empresas.map(normalizeCompany);
+          companies = mergeCompanies([...data.empresas.map(normalizeCompany), ...localCompanies]);
           companies = mergeCompanies(companies);
           selectedCompanyId = companies[0]?.id || selectedCompanyId;
           localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
           renderCompanyOptions();
         }
         if (Array.isArray(data.tareas)) {
-          activities = data.tareas.map(normalizeActivity);
+          const remoteActivities = data.tareas.map(normalizeActivity);
+          const mergedActivities = mergeActivities(remoteActivities, localActivities);
+          const hadLocalOnly = mergedActivities.some(item => !remoteActivities.some(remote => remote.id === item.id));
+          activities = mergedActivities;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+          if (hadLocalOnly) pendingRemoteSync = true;
         }
         remoteLoaded = true;
+        if (pendingRemoteSync) setTimeout(syncToGoogleSheets, 250);
       }).catch(error => console.warn("No se pudo cargar Google Sheets", error));
     }
     function jsonp(url) {
@@ -1818,6 +1830,17 @@
       });
       return merged;
     }
+    function mergeActivities(remoteItems, localItems) {
+      const merged = new Map();
+      remoteItems.forEach(item => merged.set(item.id, item));
+      localItems.forEach(item => {
+        const current = merged.get(item.id);
+        if (!current || new Date(item.updatedAt || 0) > new Date(current.updatedAt || 0)) {
+          merged.set(item.id, item);
+        }
+      });
+      return [...merged.values()].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+    }
     function normalizeActivity(item) {
       const isCalendar = item.kind === "calendar" || item.status === "Calendario";
       return {
@@ -1835,7 +1858,8 @@
         assignedBy: item.assignedBy || item.owner || "",
         notes: item.notes || "",
         alertMode: item.alertMode || "Sonido y visual",
-        attachments: Array.isArray(item.attachments) ? item.attachments : []
+        attachments: Array.isArray(item.attachments) ? item.attachments : [],
+        updatedAt: item.updatedAt || new Date().toISOString()
       };
     }
     function enableAudio() {
@@ -2075,7 +2099,8 @@
         status: "Calendario",
         notes: calendarNotes.value.trim(),
         alertMode: "Solo visual",
-        attachments: []
+        attachments: [],
+        updatedAt: new Date().toISOString()
       });
       calendarTitle.value = "";
       calendarNotes.value = "";
@@ -2228,7 +2253,8 @@
         status: editingActivityId ? (activities.find(item => item.id === editingActivityId)?.status || "Abierta") : "Abierta",
         notes: notes.value,
         alertMode: alertMode.value,
-        attachments: attachmentsDraft
+        attachments: attachmentsDraft,
+        updatedAt: new Date().toISOString()
       };
       if (editingActivityId) {
         activities = activities.map(item => item.id === editingActivityId ? nextActivity : item);
@@ -2273,7 +2299,7 @@
     }
     function setStatus(id, status) {
       const activity = activities.find(item => item.id === id);
-      activities = activities.map(item => item.id === id ? { ...item, status } : item);
+      activities = activities.map(item => item.id === id ? { ...item, status, updatedAt: new Date().toISOString() } : item);
       save();
       if (status === "Cerrada" && activity) {
         selectedCompanyId = activity.companyId;
@@ -2285,7 +2311,7 @@
       render();
     }
     function reopenActivity(id) {
-      activities = activities.map(item => item.id === id ? { ...item, status: "Abierta" } : item);
+      activities = activities.map(item => item.id === id ? { ...item, status: "Abierta", updatedAt: new Date().toISOString() } : item);
       save();
       setTab("actividades");
     }
