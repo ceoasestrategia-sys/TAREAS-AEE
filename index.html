@@ -542,6 +542,24 @@
       min-height: auto;
       padding: 0;
     }
+    .download-link {
+      align-items: center;
+      background: #0fa9a5;
+      border-radius: 8px;
+      color: white;
+      display: inline-flex;
+      font-size: 12px;
+      font-weight: 900;
+      min-height: 32px;
+      padding: 6px 10px;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .download-link.muted {
+      background: #d9ded5;
+      color: #596453;
+      pointer-events: none;
+    }
     .saved-attachments {
       border-top: 1px solid #e4e8de;
       display: grid;
@@ -1662,6 +1680,12 @@
       if (areaName === "PROGRAMACION") return ownerForArea("PROGRAMACION");
       return currentUser && currentUser.role !== "Admin" ? currentUser.name : ownerForArea(areaName);
     }
+    function assignedByLabel(item) {
+      if (!item.assignedBy || (item.owner === "Administrador" && item.assignedBy === "Administrador")) {
+        return "Sin registro";
+      }
+      return item.assignedBy;
+    }
     function companyById(id) {
       return companies.find(item => item.id === id);
     }
@@ -1898,7 +1922,7 @@
         priority: item.priority || "Media",
         status: isCalendar ? "Calendario" : (item.status || "Abierta"),
         kind: isCalendar ? "calendar" : (item.kind || "task"),
-        assignedBy: item.assignedBy || item.owner || "",
+        assignedBy: item.assignedBy || item.createdBy || "",
         notes: item.notes || "",
         alertMode: item.alertMode || "Sonido y visual",
         attachments: Array.isArray(item.attachments) ? item.attachments : [],
@@ -2090,15 +2114,32 @@
     function slugify(value) {
       return String(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || crypto.randomUUID();
     }
-    function addAttachments(files) {
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error("No se pudo leer el archivo"));
+        reader.readAsDataURL(file);
+      });
+    }
+    async function addAttachments(files) {
       if (!files || !files.length) return;
-      attachmentsDraft = attachmentsDraft.concat(Array.from(files).map(file => ({
+      const maxSize = 2 * 1024 * 1024;
+      const selectedFiles = Array.from(files);
+      const tooLarge = selectedFiles.filter(file => file.size > maxSize);
+      if (tooLarge.length) {
+        alert(`Estos archivos superan 2 MB y no se guardaran en Google Sheets: ${tooLarge.map(file => file.name).join(", ")}`);
+      }
+      const readableFiles = selectedFiles.filter(file => file.size <= maxSize);
+      const nextAttachments = await Promise.all(readableFiles.map(async file => ({
         id: crypto.randomUUID(),
         name: file.name,
         size: file.size,
         type: file.type || "Archivo",
-        path: file.webkitRelativePath || ""
+        path: file.webkitRelativePath || "",
+        dataUrl: await readFileAsDataUrl(file)
       })));
+      attachmentsDraft = attachmentsDraft.concat(nextAttachments);
       fileInput.value = "";
       folderInput.value = "";
       renderPendingAttachments();
@@ -2115,6 +2156,22 @@
           <button type="button" onclick="removePendingAttachment('${file.id}')">Quitar</button>
         </li>
       `).join("");
+    }
+    function renderAttachmentList(files) {
+      return `
+        <div class="saved-attachments">
+          <strong>Soportes adjuntos</strong>
+          <ul>
+            ${(files || []).map(file => `
+              <li>
+                <span>${escapeHtml(file.path || file.name)}</span>
+                <small>${formatFileSize(file.size)}</small>
+                ${file.dataUrl ? `<a class="download-link" href="${file.dataUrl}" download="${escapeHtml(file.name || "soporte")}">Descargar</a>` : `<span class="download-link muted">Sin descarga</span>`}
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+      `;
     }
     function isCalendarEvent(item) {
       return item.kind === "calendar" || item.status === "Calendario";
@@ -2237,7 +2294,7 @@
               return `<div class="calendar-event" onclick="event.stopPropagation()" style="background:${color}">
                 <strong>${escapeHtml(item.title)}</strong>
                 <span>${escapeHtml(calendarTimeRange(item))} | ${escapeHtml(item.area)}</span>
-                <span>Asignado por ${escapeHtml(item.assignedBy || item.owner || "Usuario")}</span>
+                <span>Asignado por ${escapeHtml(assignedByLabel(item))}</span>
                 ${item.notes ? `<span>${escapeHtml(item.notes)}</span>` : ""}
                 ${currentUser.role === "Admin" || item.owner === currentUser.name ? `<button type="button" onclick="removeCalendarEvent('${item.id}')">Eliminar</button>` : ""}
               </div>`;
@@ -2270,7 +2327,7 @@
                 return `<div class="day-event" onclick="event.stopPropagation()" style="background:${color}">
                   <strong>${escapeHtml(item.title)}</strong>
                   <span>${escapeHtml(calendarTimeRange(item))} | ${escapeHtml(item.area)}</span>
-                  <span>Asignado por ${escapeHtml(item.assignedBy || item.owner || "Usuario")}</span>
+                  <span>Asignado por ${escapeHtml(assignedByLabel(item))}</span>
                   ${currentUser.role === "Admin" || item.owner === currentUser.name ? `<button type="button" onclick="removeCalendarEvent('${item.id}')">Eliminar</button>` : ""}
                 </div>`;
               }).join("")}
@@ -2284,17 +2341,18 @@
       if (!currentUser) return;
       const selectedArea = area.value;
       const availableCompanies = areaCompanies(selectedArea);
+      const existingActivity = editingActivityId ? activities.find(item => item.id === editingActivityId) : null;
       const nextActivity = {
         id: editingActivityId || crypto.randomUUID(),
         title: title.value,
         area: selectedArea,
         owner: owner.value || ownerForAssignment(selectedArea),
-        assignedBy: currentUser.name,
+        assignedBy: existingActivity?.assignedBy || currentUser.name,
         companyId: availableCompanies.length ? company.value : "",
         dueDate: dueDate.value,
         dueTime: dueTime.value,
         priority: priority.value,
-        status: editingActivityId ? (activities.find(item => item.id === editingActivityId)?.status || "Abierta") : "Abierta",
+        status: editingActivityId ? (existingActivity?.status || "Abierta") : "Abierta",
         notes: notes.value,
         alertMode: alertMode.value,
         attachments: attachmentsDraft,
@@ -2498,7 +2556,7 @@
               ${item.companyId && companyById(item.companyId) ? `<span class="company-pill" style="background:${companyById(item.companyId).color}">${escapeHtml(companyById(item.companyId).name)}</span>` : ""}
               <h3>${escapeHtml(item.title)}</h3>
               <p>${escapeHtml(item.area)} | Responsable: ${escapeHtml(item.owner)}</p>
-              <p>Asignado por: ${escapeHtml(item.assignedBy || "Sin registro")}</p>
+              <p>Asignado por: ${escapeHtml(assignedByLabel(item))}</p>
             </div>
             <div class="deadline">
               <strong>${item.days < 0 ? Math.abs(item.days) + " dias vencida" : item.days === 0 ? "Vence hoy" : item.days + " dias"}</strong>
@@ -2506,19 +2564,7 @@
             </div>
           </div>
           <p class="notes">${escapeHtml(item.notes || "Sin observaciones.")}</p>
-          ${(item.attachments || []).length ? `
-            <div class="saved-attachments">
-              <strong>Soportes adjuntos</strong>
-              <ul>
-                ${(item.attachments || []).map(file => `
-                  <li>
-                    <span>${escapeHtml(file.path || file.name)}</span>
-                    <small>${formatFileSize(file.size)}</small>
-                  </li>
-                `).join("")}
-              </ul>
-            </div>
-          ` : ""}
+          ${(item.attachments || []).length ? renderAttachmentList(item.attachments) : ""}
           <div class="actions">
             <select onchange="setStatus('${item.id}', this.value)">
               ${["Abierta", "En progreso", "En espera", "Cerrada"].map(s => `<option ${s === item.status ? "selected" : ""}>${s}</option>`).join("")}
@@ -2567,11 +2613,12 @@
                     ${item.companyId && companyById(item.companyId) ? `<span class="company-pill" style="background:${companyById(item.companyId).color}">${escapeHtml(companyById(item.companyId).name)}</span>` : `<span class="pill neutral">${escapeHtml(item.area)}</span>`}
                     <h3>${escapeHtml(item.title)}</h3>
                     <p>${escapeHtml(item.area)} | Responsable: ${escapeHtml(item.owner)}</p>
-                    <p>Asignado por: ${escapeHtml(item.assignedBy || "Sin registro")}</p>
+                    <p>Asignado por: ${escapeHtml(assignedByLabel(item))}</p>
                   </div>
                   <div class="deadline"><strong>Finalizada</strong><span>${formatDue(item)}</span></div>
                 </div>
                 <p class="notes">${escapeHtml(item.notes || "Sin observaciones.")}</p>
+                ${(item.attachments || []).length ? renderAttachmentList(item.attachments) : ""}
                 <div class="actions">
                   <button type="button" onclick="reopenActivity('${item.id}')">REABRIR</button>
                   <button type="button" class="secondary" onclick="editActivity('${item.id}')">EDITAR</button>
