@@ -390,13 +390,37 @@
     .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .toolbar {
       display: grid;
-      grid-template-columns: 1fr 190px;
+      grid-template-columns: minmax(180px, 1fr) 170px 150px minmax(170px, 220px);
       gap: 18px;
       margin-bottom: 22px;
       padding: 0;
       border: 0;
       box-shadow: none;
       background: transparent;
+    }
+    .pager {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      margin-top: 14px;
+    }
+    .pager-info {
+      color: #536173;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .pager-controls {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .pager-controls button,
+    .pager-controls select {
+      min-height: 42px;
+      width: auto;
     }
     .card {
       animation: fadeUp .32s ease both;
@@ -1387,6 +1411,9 @@
               <option>PROGRAMACION</option>
               <option>LIQUIDADORA</option>
               <option>COORDINACION</option>
+              <option>CONCILIACION 1</option>
+              <option>INSOLVENCIA 2</option>
+              <option>PRES 3</option>
             </select>
           </label>
           <label><span>Responsable</span><select id="owner"></select></label>
@@ -1425,14 +1452,21 @@
       </div>
       <div id="activitiesPanel">
         <div class="toolbar">
-          <input id="search" oninput="render()" placeholder="Buscar por actividad, area o responsable">
-          <select id="filter" onchange="render()">
+          <input id="search" oninput="resetActivityPage(); render()" placeholder="Buscar por actividad, area o responsable">
+          <select id="filter" onchange="resetActivityPage(); render()">
             <option>Todas</option><option>Critica</option><option>Alto riesgo</option><option>Vigilar</option>
             <option>Abierta</option><option>En progreso</option><option>En espera</option><option>Cerrada</option>
           </select>
+          <select id="groupType" onchange="updateGroupValueOptions(true)">
+            <option value="todas">Todas</option>
+            <option value="areas">Areas</option>
+            <option value="empresas">Empresas</option>
+          </select>
+          <select id="groupValue" onchange="resetActivityPage(); render()" style="display:none"></select>
         </div>
       </div>
       <div id="list"></div>
+      <div id="pagination" class="pager"></div>
       <div id="historyPanel" style="display:none"></div>
     </section>
     </section>
@@ -1511,7 +1545,10 @@
       "ADMINISTRATIVOS": "#475569",
       "PROGRAMACION": "#0f766e",
       "LIQUIDADORA": "#be185d",
-      "COORDINACION": "#7c3aed"
+      "COORDINACION": "#7c3aed",
+      "CONCILIACION 1": "#0ea5e9",
+      "INSOLVENCIA 2": "#f97316",
+      "PRES 3": "#14b8a6"
     };
     const DEFAULT_COMPANIES = [
       { id: "inserlog-sas", name: "INSERLOG S.A.S", color: "#2563eb" },
@@ -1532,7 +1569,7 @@
       { id: "otros", name: "OTROS", color: "#0f766e" }
     ];
     const USERS = [
-      { id: "admin", name: "Administrador", role: "Admin", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD", "IPNNC", "EMPRESAS", "1116", "ADMINISTRATIVOS", "PROGRAMACION", "LIQUIDADORA", "COORDINACION"], pin: "0000" },
+      { id: "admin", name: "Administrador", role: "Admin", areas: ["PROCESOS", "COOPLENEXUS", "LIQUIDACIONES JD", "IPNNC", "EMPRESAS", "1116", "ADMINISTRATIVOS", "PROGRAMACION", "LIQUIDADORA", "COORDINACION", "CONCILIACION 1", "INSOLVENCIA 2", "PRES 3"], pin: "0000" },
       { id: "amaury-mesa", name: "Amaury Mesa", role: "Area", areas: ["EMPRESAS"], pin: "5132" },
       { id: "maria-paula", name: "Maria Paula", role: "Area", areas: ["EMPRESAS"], pin: "8644" },
       { id: "camila-daza", name: "Camila Daza", role: "Area", areas: ["EMPRESAS", "IPNNC"], pin: "2708" },
@@ -1541,7 +1578,8 @@
       { id: "paula-bogota", name: "Paula Bogota", role: "Area", areas: ["PROCESOS", "COOPLENEXUS"], pin: "6877" },
       { id: "britney-cardenas", name: "Britney Cardenas", role: "Area", areas: ["IPNNC"], pin: "2660" },
       { id: "paula-guevara", name: "Paula Guevara", role: "Area", areas: ["IPNNC"], pin: "5090" },
-      { id: "dilan-garcia", name: "Dilan Garcia", role: "Area", areas: ["PROGRAMACION"], pin: "0507" }
+      { id: "dilan-garcia", name: "Dilan Garcia", role: "Area", areas: ["PROGRAMACION"], pin: "0507" },
+      { id: "thalia-guzman", name: "Thalia Guzman", role: "Area", areas: ["CONCILIACION 1", "INSOLVENCIA 2", "PRES 3"], pin: "0102" }
     ];
     const dayMs = 24 * 60 * 60 * 1000;
     let attachmentsDraft = [];
@@ -1556,6 +1594,8 @@
     let currentUser = null;
     let activeSection = "tasks";
     let activeTab = "actividades";
+    let activityPage = 1;
+    let activityPageSize = 5;
     let alertsDismissed = false;
     let calendarMonth = new Date();
     let calendarMode = "month";
@@ -1721,6 +1761,7 @@
       area.value = currentUser.role === "Admin" ? "PROCESOS" : currentUser.areas[0];
       calendarArea.value = assignAreas.includes(area.value) ? area.value : assignAreas[0];
       updateOwnerField();
+      updateGroupValueOptions(false);
       setSection(activeSection || "tasks", false);
       render();
       setTimeout(checkAlarms, 250);
@@ -1785,6 +1826,7 @@
           selectedCompanyId = companies[0]?.id || selectedCompanyId;
           localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
           renderCompanyOptions();
+          if (currentUser) updateGroupValueOptions(false);
         }
         if (Array.isArray(data.tareas)) {
           const remoteActivities = data.tareas.map(normalizeActivity);
@@ -1792,6 +1834,7 @@
           const hadLocalOnly = mergedActivities.some(item => !remoteActivities.some(remote => remote.id === item.id));
           activities = mergedActivities;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+          if (currentUser) updateGroupValueOptions(false);
           if (hadLocalOnly) pendingRemoteSync = true;
         }
         remoteLoaded = true;
@@ -2246,6 +2289,7 @@
         title: title.value,
         area: selectedArea,
         owner: owner.value || ownerForAssignment(selectedArea),
+        assignedBy: currentUser.name,
         companyId: availableCompanies.length ? company.value : "",
         dueDate: dueDate.value,
         dueTime: dueTime.value,
@@ -2330,6 +2374,7 @@
       newCompanyName.value = "";
       saveCompanies();
       renderCompanyOptions();
+      updateGroupValueOptions(false);
       render();
     }
     function exportCsv() {
@@ -2351,6 +2396,73 @@
     function scoped() {
       return enriched().filter(item => currentUser && (currentUser.role === "Admin" || currentUser.areas.includes(item.area)));
     }
+    function resetActivityPage() {
+      activityPage = 1;
+    }
+    function setActivityPageSize(value) {
+      activityPageSize = value === "all" ? "all" : Number(value);
+      resetActivityPage();
+      render();
+    }
+    function updateGroupValueOptions(resetPage = false) {
+      if (!currentUser) return;
+      if (resetPage) resetActivityPage();
+      const type = groupType.value;
+      if (type === "todas") {
+        groupValue.style.display = "none";
+        groupValue.innerHTML = "";
+        render();
+        return;
+      }
+      let options = [];
+      if (type === "areas") {
+        options = [...new Set(scoped().map(item => item.area).filter(Boolean))].sort();
+      } else if (type === "empresas") {
+        options = [...new Map(scoped()
+          .filter(item => item.companyId && companyById(item.companyId))
+          .map(item => [item.companyId, companyById(item.companyId).name])).entries()]
+          .sort((a, b) => a[1].localeCompare(b[1]));
+      }
+      groupValue.style.display = "block";
+      groupValue.innerHTML = `<option value="Todas">Todas</option>` + options.map(item => {
+        const value = Array.isArray(item) ? item[0] : item;
+        const label = Array.isArray(item) ? item[1] : item;
+        return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+      }).join("");
+      if (!Array.from(groupValue.options).some(option => option.value === groupValue.value)) groupValue.value = "Todas";
+      render();
+    }
+    function applyGroupFilter(data) {
+      if (groupType.value === "areas" && groupValue.value !== "Todas") {
+        return data.filter(item => item.area === groupValue.value);
+      }
+      if (groupType.value === "empresas" && groupValue.value !== "Todas") {
+        return data.filter(item => item.companyId === groupValue.value);
+      }
+      return data;
+    }
+    function renderPagination(totalItems, totalPages) {
+      if (!totalItems) {
+        pagination.innerHTML = "";
+        return;
+      }
+      const start = activityPageSize === "all" ? 1 : (activityPage - 1) * activityPageSize + 1;
+      const end = activityPageSize === "all" ? totalItems : Math.min(activityPage * activityPageSize, totalItems);
+      pagination.innerHTML = `
+        <div class="pager-info">Mostrando ${start}-${end} de ${totalItems}</div>
+        <div class="pager-controls">
+          <select onchange="setActivityPageSize(this.value)">
+            <option value="5" ${activityPageSize === 5 ? "selected" : ""}>5 por hoja</option>
+            <option value="all" ${activityPageSize === "all" ? "selected" : ""}>Ver todas</option>
+          </select>
+          <button type="button" class="secondary" ${activityPage === 1 || activityPageSize === "all" ? "disabled" : ""} onclick="activityPage--; render()">Anterior</button>
+          <select onchange="activityPage = Number(this.value); render()">
+            ${Array.from({ length: totalPages }, (_, index) => `<option value="${index + 1}" ${activityPage === index + 1 ? "selected" : ""}>Hoja ${index + 1}</option>`).join("")}
+          </select>
+          <button type="button" class="secondary" ${activityPage === totalPages || activityPageSize === "all" ? "disabled" : ""} onclick="activityPage++; render()">Siguiente</button>
+        </div>
+      `;
+    }
     function render() {
       if (!currentUser) return;
       let data = scoped().filter(item => viewArea.value === "Todas" || item.area === viewArea.value);
@@ -2369,10 +2481,15 @@
       const q = search.value.toLowerCase();
       const f = filter.value;
       const visible = activeData.filter(item => {
-        const text = `${item.title} ${item.area} ${item.owner}`.toLowerCase();
+        const text = `${item.title} ${item.area} ${item.owner} ${companyById(item.companyId)?.name || ""}`.toLowerCase();
         return text.includes(q) && (f === "Todas" || labels[item.risk] === f || item.status === f);
       });
-      list.innerHTML = visible.length ? visible.map(item => `
+      const groupedVisible = applyGroupFilter(visible);
+      const effectivePageSize = activityPageSize === "all" ? Math.max(groupedVisible.length, 1) : activityPageSize;
+      const totalPages = Math.max(1, Math.ceil(groupedVisible.length / effectivePageSize));
+      if (activityPage > totalPages) activityPage = totalPages;
+      const pagedVisible = groupedVisible.slice((activityPage - 1) * effectivePageSize, activityPage * effectivePageSize);
+      list.innerHTML = pagedVisible.length ? pagedVisible.map(item => `
         <article class="card ${item.risk}">
           <div class="card-head">
             <div>
@@ -2381,6 +2498,7 @@
               ${item.companyId && companyById(item.companyId) ? `<span class="company-pill" style="background:${companyById(item.companyId).color}">${escapeHtml(companyById(item.companyId).name)}</span>` : ""}
               <h3>${escapeHtml(item.title)}</h3>
               <p>${escapeHtml(item.area)} | Responsable: ${escapeHtml(item.owner)}</p>
+              <p>Asignado por: ${escapeHtml(item.assignedBy || "Sin registro")}</p>
             </div>
             <div class="deadline">
               <strong>${item.days < 0 ? Math.abs(item.days) + " dias vencida" : item.days === 0 ? "Vence hoy" : item.days + " dias"}</strong>
@@ -2411,6 +2529,7 @@
           </div>
         </article>
       `).join("") : `<div class="empty"><strong>No hay actividades con esos filtros.</strong><span>Intenta ajustar los filtros de busqueda.</span></div>`;
+      renderPagination(groupedVisible.length, totalPages);
       renderHistory();
       renderCalendar();
     }
@@ -2448,6 +2567,7 @@
                     ${item.companyId && companyById(item.companyId) ? `<span class="company-pill" style="background:${companyById(item.companyId).color}">${escapeHtml(companyById(item.companyId).name)}</span>` : `<span class="pill neutral">${escapeHtml(item.area)}</span>`}
                     <h3>${escapeHtml(item.title)}</h3>
                     <p>${escapeHtml(item.area)} | Responsable: ${escapeHtml(item.owner)}</p>
+                    <p>Asignado por: ${escapeHtml(item.assignedBy || "Sin registro")}</p>
                   </div>
                   <div class="deadline"><strong>Finalizada</strong><span>${formatDue(item)}</span></div>
                 </div>
