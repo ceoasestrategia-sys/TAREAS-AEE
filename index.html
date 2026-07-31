@@ -1610,6 +1610,7 @@
     let editingActivityId = null;
     let remoteLoaded = false;
     let pendingRemoteSync = false;
+    let syncingRemote = false;
     let audioEnabled = false;
     let alarmAudioContext = null;
     let alarmTimers = [];
@@ -1821,26 +1822,65 @@
       localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
       syncToGoogleSheets();
     }
-    function syncToGoogleSheets() {
+    async function syncToGoogleSheets() {
       if (!GOOGLE_SHEETS_API_URL) return;
       if (!remoteLoaded) {
         pendingRemoteSync = true;
         console.warn("No se sincroniza: primero debe cargar Google Sheets.");
         return;
       }
+      if (syncingRemote) {
+        pendingRemoteSync = true;
+        return;
+      }
+      syncingRemote = true;
       pendingRemoteSync = false;
-      localStorage.setItem(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), activities, companies }));
-      fetch(GOOGLE_SHEETS_API_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "saveAll",
-          tareas: activities.map(serializeActivityForRemote),
-          usuarios: USERS,
-          empresas: companies
-        })
-      }).catch(error => console.warn("No se pudo sincronizar con Google Sheets", error));
+      try {
+        const storedActivities = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        const storedCompanies = JSON.parse(localStorage.getItem(COMPANIES_KEY) || "[]");
+        const localActivities = Array.isArray(storedActivities) ? storedActivities.map(normalizeActivity) : [];
+        const localCompanies = Array.isArray(storedCompanies) ? storedCompanies.map(normalizeCompany) : [];
+        let remoteActivities = [];
+        let remoteCompanies = [];
+        try {
+          const remoteData = await jsonp(GOOGLE_SHEETS_API_URL);
+          remoteActivities = Array.isArray(remoteData.tareas) ? remoteData.tareas.map(normalizeActivity) : [];
+          remoteCompanies = Array.isArray(remoteData.empresas) ? remoteData.empresas.map(normalizeCompany) : [];
+        } catch (error) {
+          console.warn("No se pudo leer antes de sincronizar; se conserva la copia local.", error);
+        }
+        activities = mergeActivities(remoteActivities, localActivities);
+        companies = mergeCompanies([...remoteCompanies, ...localCompanies]);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+        localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+        localStorage.setItem(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), activities, companies }));
+        await fetch(GOOGLE_SHEETS_API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "saveAll",
+            tareas: activities.map(serializeActivityForRemote),
+            usuarios: USERS,
+            empresas: companies
+          })
+        });
+        if (currentUser) {
+          renderCompanyOptions();
+          updateGroupValueOptions(false);
+          render();
+          renderCalendar();
+        }
+      } catch (error) {
+        pendingRemoteSync = true;
+        console.warn("No se pudo sincronizar con Google Sheets", error);
+      } finally {
+        syncingRemote = false;
+        if (pendingRemoteSync) {
+          pendingRemoteSync = false;
+          setTimeout(syncToGoogleSheets, 750);
+        }
+      }
     }
     function loadFromGoogleSheets() {
       if (!GOOGLE_SHEETS_API_URL) return Promise.resolve();
@@ -1870,6 +1910,13 @@
         remoteLoaded = true;
         if (pendingRemoteSync) setTimeout(syncToGoogleSheets, 250);
       }).catch(error => console.warn("No se pudo cargar Google Sheets", error));
+    }
+    function refreshFromGoogleSheets() {
+      if (!currentUser || !remoteLoaded || syncingRemote) return;
+      loadFromGoogleSheets().then(() => {
+        render();
+        renderCalendar();
+      }).catch(error => console.warn("No se pudo refrescar Google Sheets", error));
     }
     function jsonp(url) {
       return new Promise((resolve, reject) => {
@@ -1928,12 +1975,17 @@
         notes: item.assignedBy ? `[[ASIGNADO_POR:${item.assignedBy}]]\n${cleanNotes}` : cleanNotes
       };
     }
+    function normalizeAreaName(value) {
+      const areaName = String(value || "PROCESOS").trim().toUpperCase();
+      if (areaName === "INNPC") return "IPNNC";
+      return areaName;
+    }
     function normalizeActivity(item) {
       const isCalendar = item.kind === "calendar" || item.status === "Calendario";
       return {
         id: item.id || crypto.randomUUID(),
         title: item.title || "Actividad sin titulo",
-        area: item.area || "PROCESOS",
+        area: normalizeAreaName(item.area),
         owner: item.owner || "",
         companyId: item.companyId || "",
         dueDate: String(item.dueDate || addDays(2)).slice(0, 10),
@@ -1946,7 +1998,7 @@
         notes: stripAssignmentMeta(item.notes),
         alertMode: item.alertMode || "Sonido y visual",
         attachments: Array.isArray(item.attachments) ? item.attachments : [],
-        updatedAt: item.updatedAt || new Date().toISOString()
+        updatedAt: item.updatedAt || item.createdAt || "2026-01-01T00:00:00.000Z"
       };
     }
     function enableAudio() {
@@ -2551,8 +2603,6 @@
       let data = scoped().filter(item => viewArea.value === "Todas" || item.area === viewArea.value);
       if (currentUser.role === "Admin" && activeTab === "propias") {
         data = data.filter(item => item.owner === currentUser.name);
-      } else if (currentUser.role === "Admin" && activeTab === "actividades") {
-        data = data.filter(item => item.owner !== currentUser.name);
       }
       const activeData = data.filter(item => item.status !== "Cerrada");
       totalCritical.textContent = activeData.filter(x => x.risk === "critical").length;
@@ -2679,6 +2729,7 @@
     currentUser = USERS.find(user => user.id === savedSession) || null;
     loadFromGoogleSheets().finally(applySession);
     setInterval(checkAlarms, 30000);
+    setInterval(refreshFromGoogleSheets, 20000);
   </script>
 </body>
 </html>
