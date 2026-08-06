@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AEE Control de Gestion</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -1553,6 +1555,17 @@
 
   <script>
     const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbxDXa3YZRJYHBoSKJ9PfJOYz37nwU1Bhh_1WCqfOZFyuAtCTB1pV_WdPZIWMHKAbzMQ/exec";
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyB0Bad5bFcDLQngRrunhq4CxKnhn_94gD4",
+      authDomain: "aee-tareas.firebaseapp.com",
+      projectId: "aee-tareas",
+      storageBucket: "aee-tareas.firebasestorage.app",
+      messagingSenderId: "480662646893",
+      appId: "1:480662646893:web:fd0b18e79a1b3c43c2cf64",
+      measurementId: "G-00RHC2J91P"
+    };
+    const FIREBASE_TASKS_COLLECTION = "tareas";
+    const FIREBASE_COMPANIES_COLLECTION = "empresas";
     const STORAGE_KEY = "mini-remedy-html-activities";
     const SESSION_KEY = "mini-remedy-html-session";
     const COMPANIES_KEY = "mini-remedy-html-companies";
@@ -1611,6 +1624,15 @@
     let remoteLoaded = false;
     let pendingRemoteSync = false;
     let syncingRemote = false;
+    let firebaseDb = null;
+    let firebaseReady = false;
+    let syncingFirebase = false;
+    let syncingFirebaseTasks = false;
+    let syncingFirebaseCompanies = false;
+    let firebaseTasksLoaded = false;
+    let firebaseCompaniesLoaded = false;
+    let unsubscribeFirebaseTasks = null;
+    let unsubscribeFirebaseCompanies = null;
     let audioEnabled = false;
     let alarmAudioContext = null;
     let alarmTimers = [];
@@ -1816,11 +1838,119 @@
     const rank = { critical: 0, risk: 1, watch: 2, ok: 3, closed: 4 };
     function save() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+      syncToFirebase();
       syncToGoogleSheets();
     }
     function saveCompanies() {
       localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+      syncCompaniesToFirebase();
       syncToGoogleSheets();
+    }
+    function initFirebase() {
+      if (!window.firebase || !FIREBASE_CONFIG.apiKey) {
+        console.warn("Firebase no esta disponible; se conserva Google Sheets como respaldo.");
+        return Promise.resolve(false);
+      }
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        firebaseDb = firebase.firestore();
+        firebaseReady = true;
+        remoteLoaded = true;
+        listenFirebaseTasks();
+        listenFirebaseCompanies();
+        return Promise.resolve(true);
+      } catch (error) {
+        console.warn("No se pudo iniciar Firebase", error);
+        return Promise.resolve(false);
+      }
+    }
+    function listenFirebaseTasks() {
+      if (!firebaseDb || unsubscribeFirebaseTasks) return;
+      unsubscribeFirebaseTasks = firebaseDb.collection(FIREBASE_TASKS_COLLECTION).onSnapshot(snapshot => {
+        const remoteActivities = snapshot.docs.map(doc => normalizeActivity({ id: doc.id, ...doc.data() }));
+        firebaseTasksLoaded = true;
+        if (!remoteActivities.length && activities.length && !syncingFirebase) {
+          syncToFirebase();
+          return;
+        }
+        const storedActivities = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        const localActivities = Array.isArray(storedActivities) ? storedActivities.map(normalizeActivity) : [];
+        activities = mergeActivities(remoteActivities, localActivities);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+        if (currentUser) {
+          updateGroupValueOptions(false);
+          render();
+          renderCalendar();
+        }
+      }, error => console.warn("No se pudo leer tareas desde Firebase", error));
+    }
+    function listenFirebaseCompanies() {
+      if (!firebaseDb || unsubscribeFirebaseCompanies) return;
+      unsubscribeFirebaseCompanies = firebaseDb.collection(FIREBASE_COMPANIES_COLLECTION).onSnapshot(snapshot => {
+        const remoteCompanies = snapshot.docs.map(doc => normalizeCompany({ id: doc.id, ...doc.data() }));
+        firebaseCompaniesLoaded = true;
+        if (!remoteCompanies.length && companies.length && !syncingFirebase) {
+          syncCompaniesToFirebase();
+          return;
+        }
+        companies = mergeCompanies(remoteCompanies.length ? remoteCompanies : companies);
+        localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+        renderCompanyOptions();
+        if (currentUser) {
+          updateGroupValueOptions(false);
+          render();
+        }
+      }, error => console.warn("No se pudo leer empresas desde Firebase", error));
+    }
+    function firebaseSafeAttachment(file) {
+      return {
+        id: file.id || crypto.randomUUID(),
+        name: file.name || "soporte",
+        size: Number(file.size || 0),
+        type: file.type || "Archivo",
+        path: file.path || "",
+        dataUrl: file.dataUrl || file.url || file.data || ""
+      };
+    }
+    function firebaseSafeActivity(item) {
+      const normalized = normalizeActivity(item);
+      return {
+        ...normalized,
+        attachments: (normalized.attachments || []).map(firebaseSafeAttachment),
+        updatedAt: normalized.updatedAt || new Date().toISOString()
+      };
+    }
+    async function syncToFirebase() {
+      if (!firebaseReady || !firebaseDb || syncingFirebase) return;
+      syncingFirebase = true;
+      try {
+        const batch = firebaseDb.batch();
+        activities.forEach(item => {
+          const safeItem = firebaseSafeActivity(item);
+          batch.set(firebaseDb.collection(FIREBASE_TASKS_COLLECTION).doc(safeItem.id), safeItem, { merge: true });
+        });
+        await batch.commit();
+      } catch (error) {
+        console.warn("No se pudo sincronizar tareas con Firebase", error);
+      } finally {
+        syncingFirebase = false;
+      }
+    }
+    async function syncCompaniesToFirebase() {
+      if (!firebaseReady || !firebaseDb || syncingFirebase) return;
+      syncingFirebase = true;
+      try {
+        const batch = firebaseDb.batch();
+        companies.forEach(item => {
+          const safeCompany = normalizeCompany(item);
+          batch.set(firebaseDb.collection(FIREBASE_COMPANIES_COLLECTION).doc(safeCompany.id), safeCompany, { merge: true });
+        });
+        await batch.commit();
+      } catch (error) {
+        console.warn("No se pudo sincronizar empresas con Firebase", error);
+      } finally {
+        syncingFirebase = false;
+      }
     }
     async function syncToGoogleSheets() {
       if (!GOOGLE_SHEETS_API_URL) return;
@@ -1912,6 +2042,7 @@
       }).catch(error => console.warn("No se pudo cargar Google Sheets", error));
     }
     function refreshFromGoogleSheets() {
+      if (firebaseReady) return;
       if (!currentUser || !remoteLoaded || syncingRemote) return;
       loadFromGoogleSheets().then(() => {
         render();
@@ -2196,11 +2327,11 @@
     }
     async function addAttachments(files) {
       if (!files || !files.length) return;
-      const maxSize = 2 * 1024 * 1024;
+      const maxSize = 700 * 1024;
       const selectedFiles = Array.from(files);
       const tooLarge = selectedFiles.filter(file => file.size > maxSize);
       if (tooLarge.length) {
-        alert(`Estos archivos superan 2 MB y no se guardaran en Google Sheets: ${tooLarge.map(file => file.name).join(", ")}`);
+        alert(`Estos archivos superan 700 KB y no se guardaran completos en Firebase: ${tooLarge.map(file => file.name).join(", ")}. Para archivos pesados usaremos Drive o Storage.`);
       }
       const readableFiles = selectedFiles.filter(file => file.size <= maxSize);
       const nextAttachments = await Promise.all(readableFiles.map(async file => ({
@@ -2727,7 +2858,7 @@
     }
     const savedSession = localStorage.getItem(SESSION_KEY);
     currentUser = USERS.find(user => user.id === savedSession) || null;
-    loadFromGoogleSheets().finally(applySession);
+    loadFromGoogleSheets().finally(() => initFirebase().finally(applySession));
     setInterval(checkAlarms, 30000);
     setInterval(refreshFromGoogleSheets, 20000);
   </script>
