@@ -1652,7 +1652,7 @@
     let companies = JSON.parse(localStorage.getItem(COMPANIES_KEY) || "null") || DEFAULT_COMPANIES;
     if (companies.some(item => item.name === "Empresa 1")) {
       companies = DEFAULT_COMPANIES;
-      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+      try { localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies)); } catch (error) { console.warn("No se pudo guardar empresas localmente", error); }
     }
     companies = mergeCompanies(companies);
     const addDays = (days) => {
@@ -1836,15 +1836,24 @@
       closed: "Cerrada"
     };
     const rank = { critical: 0, risk: 1, watch: 2, ok: 3, closed: 4 };
+    function safeLocalSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (error) {
+        console.warn(`No se pudo guardar ${key} en este navegador; Firebase sigue activo.`, error);
+        return false;
+      }
+    }
     function save() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
       syncToFirebase();
-      syncToGoogleSheets();
+      safeLocalSet(STORAGE_KEY, JSON.stringify(activities));
+      if (!firebaseReady) syncToGoogleSheets();
     }
     function saveCompanies() {
-      localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
       syncCompaniesToFirebase();
-      syncToGoogleSheets();
+      safeLocalSet(COMPANIES_KEY, JSON.stringify(companies));
+      if (!firebaseReady) syncToGoogleSheets();
     }
     function initFirebase() {
       if (!window.firebase || !FIREBASE_CONFIG.apiKey) {
@@ -1880,7 +1889,7 @@
         const storedActivities = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
         const localActivities = Array.isArray(storedActivities) ? storedActivities.map(normalizeActivity) : [];
         activities = mergeActivities(remoteActivities, localActivities);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+        safeLocalSet(STORAGE_KEY, JSON.stringify(activities));
         if (currentUser) {
           updateGroupValueOptions(false);
           render();
@@ -1898,7 +1907,7 @@
           return;
         }
         companies = mergeCompanies(remoteCompanies.length ? remoteCompanies : companies);
-        localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+        safeLocalSet(COMPANIES_KEY, JSON.stringify(companies));
         renderCompanyOptions();
         if (currentUser) {
           updateGroupValueOptions(false);
@@ -1985,9 +1994,9 @@
         }
         activities = mergeActivities(remoteActivities, localActivities);
         companies = mergeCompanies([...remoteCompanies, ...localCompanies]);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
-        localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
-        localStorage.setItem(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), activities, companies }));
+        safeLocalSet(STORAGE_KEY, JSON.stringify(activities));
+        safeLocalSet(COMPANIES_KEY, JSON.stringify(companies));
+        safeLocalSet(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), totalActivities: activities.length, totalCompanies: companies.length }));
         await fetch(GOOGLE_SHEETS_API_URL, {
           method: "POST",
           mode: "no-cors",
@@ -2023,12 +2032,12 @@
         const storedCompanies = JSON.parse(localStorage.getItem(COMPANIES_KEY) || "[]");
         const localActivities = Array.isArray(storedActivities) ? storedActivities.map(normalizeActivity) : [];
         const localCompanies = Array.isArray(storedCompanies) ? storedCompanies.map(normalizeCompany) : [];
-        localStorage.setItem(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), activities: localActivities, companies: localCompanies }));
+        safeLocalSet(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), totalActivities: localActivities.length, totalCompanies: localCompanies.length }));
         if (Array.isArray(data.empresas) && data.empresas.length) {
           companies = mergeCompanies([...data.empresas.map(normalizeCompany), ...localCompanies]);
           companies = mergeCompanies(companies);
           selectedCompanyId = companies[0]?.id || selectedCompanyId;
-          localStorage.setItem(COMPANIES_KEY, JSON.stringify(companies));
+          safeLocalSet(COMPANIES_KEY, JSON.stringify(companies));
           renderCompanyOptions();
           if (currentUser) updateGroupValueOptions(false);
         }
@@ -2037,7 +2046,7 @@
           const mergedActivities = mergeActivities(remoteActivities, localActivities);
           const hadLocalOnly = mergedActivities.some(item => !remoteActivities.some(remote => remote.id === item.id));
           activities = mergedActivities;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+          safeLocalSet(STORAGE_KEY, JSON.stringify(activities));
           if (currentUser) updateGroupValueOptions(false);
           if (hadLocalOnly) pendingRemoteSync = true;
         }
