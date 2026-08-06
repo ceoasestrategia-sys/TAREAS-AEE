@@ -1858,6 +1858,10 @@
         remoteLoaded = true;
         listenFirebaseTasks();
         listenFirebaseCompanies();
+        setTimeout(() => {
+          syncCompaniesToFirebase();
+          syncToFirebase();
+        }, 1200);
         return Promise.resolve(true);
       } catch (error) {
         console.warn("No se pudo iniciar Firebase", error);
@@ -1869,7 +1873,7 @@
       unsubscribeFirebaseTasks = firebaseDb.collection(FIREBASE_TASKS_COLLECTION).onSnapshot(snapshot => {
         const remoteActivities = snapshot.docs.map(doc => normalizeActivity({ id: doc.id, ...doc.data() }));
         firebaseTasksLoaded = true;
-        if (!remoteActivities.length && activities.length && !syncingFirebase) {
+        if (!remoteActivities.length && activities.length && !syncingFirebaseTasks) {
           syncToFirebase();
           return;
         }
@@ -1889,7 +1893,7 @@
       unsubscribeFirebaseCompanies = firebaseDb.collection(FIREBASE_COMPANIES_COLLECTION).onSnapshot(snapshot => {
         const remoteCompanies = snapshot.docs.map(doc => normalizeCompany({ id: doc.id, ...doc.data() }));
         firebaseCompaniesLoaded = true;
-        if (!remoteCompanies.length && companies.length && !syncingFirebase) {
+        if (!remoteCompanies.length && companies.length && !syncingFirebaseCompanies) {
           syncCompaniesToFirebase();
           return;
         }
@@ -1921,8 +1925,8 @@
       };
     }
     async function syncToFirebase() {
-      if (!firebaseReady || !firebaseDb || syncingFirebase) return;
-      syncingFirebase = true;
+      if (!firebaseReady || !firebaseDb || syncingFirebaseTasks) return;
+      syncingFirebaseTasks = true;
       try {
         const batch = firebaseDb.batch();
         activities.forEach(item => {
@@ -1933,12 +1937,12 @@
       } catch (error) {
         console.warn("No se pudo sincronizar tareas con Firebase", error);
       } finally {
-        syncingFirebase = false;
+        syncingFirebaseTasks = false;
       }
     }
     async function syncCompaniesToFirebase() {
-      if (!firebaseReady || !firebaseDb || syncingFirebase) return;
-      syncingFirebase = true;
+      if (!firebaseReady || !firebaseDb || syncingFirebaseCompanies) return;
+      syncingFirebaseCompanies = true;
       try {
         const batch = firebaseDb.batch();
         companies.forEach(item => {
@@ -1949,7 +1953,7 @@
       } catch (error) {
         console.warn("No se pudo sincronizar empresas con Firebase", error);
       } finally {
-        syncingFirebase = false;
+        syncingFirebaseCompanies = false;
       }
     }
     async function syncToGoogleSheets() {
