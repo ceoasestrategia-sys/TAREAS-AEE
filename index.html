@@ -2109,7 +2109,7 @@
       try {
         const data = await jsonp(GOOGLE_SHEETS_API_URL);
         const sheetActivities = Array.isArray(data.tareas) ? data.tareas.map(normalizeActivity) : [];
-        const sheetCompanies = Array.isArray(data.empresas) ? data.empresas.map(normalizeCompany) : [];
+        const sheetCompanies = Array.isArray(data.empresas) ? data.empresas.slice(0, 500).map(normalizeCompany) : [];
         const previousCount = activities.length;
         const existingIds = new Set(activities.map(item => item.id));
         const newFromSheets = sheetActivities.filter(item => !existingIds.has(item.id) && !deletedActivityIds.has(item.id));
@@ -2117,8 +2117,8 @@
         companies = mergeCompanies([...companies, ...sheetCompanies]);
         safeLocalSet(STORAGE_KEY, JSON.stringify(activities));
         safeLocalSet(COMPANIES_KEY, JSON.stringify(companies));
-        await syncCompaniesToFirebase();
         await writeActivitiesToFirebase(activities);
+        setTimeout(() => syncCompaniesToFirebase(), 500);
         renderCompanyOptions();
         updateGroupValueOptions(false);
         render();
