@@ -3,6 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#061832" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="AEE Tareas" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/logo-aee-dorado.png" />
+  <link rel="apple-touch-icon" href="assets/logo-aee-dorado.png" />
   <title>AEE Control de Gestion</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -3065,6 +3072,13 @@
       });
     setInterval(checkAlarms, 30000);
     setInterval(refreshFromGoogleSheets, 20000);
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js").catch(error => {
+          console.warn("No se pudo activar la app instalable.", error);
+        });
+      });
+    }
   </script>
 </body>
 </html>
