@@ -1983,6 +1983,18 @@
         syncingFirebaseTasks = false;
       }
     }
+    async function writeActivitiesToFirebase(items) {
+      if (!firebaseReady || !firebaseDb) throw new Error("Firebase no esta conectado");
+      const safeActivities = items.map(firebaseSafeActivity);
+      console.info(`Migrando ${safeActivities.length} tareas hacia Firebase`);
+      for (let index = 0; index < safeActivities.length; index += 400) {
+        const batch = firebaseDb.batch();
+        safeActivities.slice(index, index + 400).forEach(safeItem => {
+          batch.set(firebaseDb.collection(FIREBASE_TASKS_COLLECTION).doc(safeItem.id), safeItem, { merge: true });
+        });
+        await batch.commit();
+      }
+    }
     async function syncCompaniesToFirebase() {
       if (!firebaseReady || !firebaseDb || syncingFirebaseCompanies) return;
       syncingFirebaseCompanies = true;
@@ -2099,17 +2111,19 @@
         const sheetActivities = Array.isArray(data.tareas) ? data.tareas.map(normalizeActivity) : [];
         const sheetCompanies = Array.isArray(data.empresas) ? data.empresas.map(normalizeCompany) : [];
         const previousCount = activities.length;
+        const existingIds = new Set(activities.map(item => item.id));
+        const newFromSheets = sheetActivities.filter(item => !existingIds.has(item.id) && !deletedActivityIds.has(item.id));
         activities = mergeActivities(activities, sheetActivities).filter(item => !deletedActivityIds.has(item.id));
         companies = mergeCompanies([...companies, ...sheetCompanies]);
         safeLocalSet(STORAGE_KEY, JSON.stringify(activities));
         safeLocalSet(COMPANIES_KEY, JSON.stringify(companies));
         await syncCompaniesToFirebase();
-        await syncToFirebase();
+        await writeActivitiesToFirebase(activities);
         renderCompanyOptions();
         updateGroupValueOptions(false);
         render();
         renderCalendar();
-        alert(`Migracion lista. Se revisaron ${sheetActivities.length} tareas de Google Sheets y Firebase quedo con ${activities.length} tareas. Antes habia ${previousCount}.`);
+        alert(`Migracion lista.\n\nTareas leidas en Google Sheets: ${sheetActivities.length}\nTareas nuevas encontradas: ${newFromSheets.length}\nAntes en Firebase/app: ${previousCount}\nTotal ahora: ${activities.length}`);
       } catch (error) {
         console.warn("No se pudo migrar Google Sheets a Firebase", error);
         alert(`No se pudo migrar Google Sheets.\n\nDetalle: ${error.message || error}`);
