@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -112,6 +112,7 @@
       font-size: 0;
       height: 52px;
       justify-content: center;
+      position: relative;
       text-decoration: none;
       width: 52px;
     }
@@ -120,6 +121,28 @@
       border-color: rgba(26, 182, 186, .78);
       box-shadow: 0 14px 26px rgba(0, 0, 0, .22);
       color: #ffffff;
+    }
+    .nav-badge {
+      align-items: center;
+      background: #ef4444;
+      border: 2px solid #07182b;
+      border-radius: 999px;
+      color: #fff;
+      display: none;
+      font-size: 11px;
+      font-weight: 800;
+      height: 21px;
+      justify-content: center;
+      line-height: 1;
+      min-width: 21px;
+      padding: 0 5px;
+      position: absolute;
+      right: -7px;
+      top: -7px;
+      z-index: 2;
+    }
+    .nav-badge.show {
+      display: inline-flex;
     }
     .side-exit { margin-top: auto; }
     header {
@@ -339,7 +362,8 @@
     }
     .blank-view,
     .coming-soon,
-    .notifications-view {
+    .notifications-view,
+    .chat-view {
       min-height: 520px;
     }
     .blank-view,
@@ -371,6 +395,229 @@
       padding: 22px;
     }
     .panel + .panel { margin-top: 16px; }
+    .chat-shell {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 20px;
+    }
+    .chat-panel {
+      display: grid;
+      grid-template-rows: auto minmax(360px, 1fr) auto;
+      max-height: calc(100vh - 235px);
+      overflow: hidden;
+      padding: 0;
+    }
+    .chat-panel h2 {
+      border-bottom: 1px solid rgba(216, 226, 239, .9);
+      margin: 0;
+      padding: 18px 20px;
+    }
+    .community-tabs {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 18px;
+    }
+    .community-tabs button {
+      background: #eef5ff;
+      border: 1px solid #d8e2ef;
+      color: #16365c;
+      min-height: 42px;
+    }
+    .community-tabs button.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+    .chat-list {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+      max-height: 230px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .chat-topic {
+      background: #fff;
+      border: 1px solid #d8e2ef;
+      border-radius: 12px;
+      cursor: pointer;
+      padding: 12px;
+      text-align: left;
+    }
+    .chat-topic.active {
+      background: #e7f8f7;
+      border-color: rgba(8, 150, 156, .55);
+    }
+    .chat-topic strong {
+      color: #10233d;
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .chat-topic span {
+      color: #64748b;
+      display: block;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .chat-participants {
+      background: #fff;
+      border: 1px solid #d8e2ef;
+      border-radius: 12px;
+      display: grid;
+      gap: 8px;
+      max-height: 180px;
+      overflow: auto;
+      padding: 12px;
+    }
+    .chat-participants label {
+      align-items: center;
+      display: flex;
+      gap: 9px;
+      margin: 0;
+    }
+    .chat-participants input {
+      min-height: auto;
+      width: auto;
+    }
+    .chat-participants span {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: none;
+    }
+    .chat-composer textarea {
+      min-height: 88px;
+    }
+    .chat-feed {
+      align-content: end;
+      background:
+        radial-gradient(circle at 12px 12px, rgba(214, 170, 29, .09) 2px, transparent 2px),
+        radial-gradient(circle at 38px 34px, rgba(8, 150, 156, .08) 2px, transparent 2px),
+        #fbf7ef;
+      background-size: 56px 56px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 360px;
+      overflow: auto;
+      padding: 18px 22px;
+    }
+    .chat-message {
+      align-self: flex-start;
+      background: #ffffff;
+      border: 1px solid rgba(219, 231, 245, .75);
+      border-radius: 12px 12px 12px 3px;
+      box-shadow: 0 3px 10px rgba(8, 25, 48, .06);
+      max-width: min(74%, 620px);
+      padding: 7px 10px 6px;
+    }
+    .chat-message.own {
+      align-self: flex-end;
+      background: #d8ffd2;
+      border-color: rgba(57, 197, 83, .35);
+      border-radius: 12px 12px 3px 12px;
+    }
+    .chat-delete {
+      background: transparent;
+      border: 0;
+      color: var(--danger);
+      font-size: 12px;
+      min-height: 0;
+      padding: 0 0 0 4px;
+    }
+    .chat-delete:hover {
+      background: transparent;
+      text-decoration: underline;
+    }
+    .chat-meta {
+      align-items: center;
+      color: #66748a;
+      display: flex;
+      flex-wrap: wrap;
+      font-size: 11px;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+    .chat-author {
+      color: #0f766e;
+      font-weight: 800;
+    }
+    .chat-area-pill {
+      background: #e7effa;
+      border-radius: 999px;
+      color: #16365c;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 7px;
+      text-transform: uppercase;
+    }
+    .chat-body {
+      color: #111827;
+      font-size: 15px;
+      line-height: 1.35;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .chat-time {
+      color: #66748a;
+      float: right;
+      font-size: 11px;
+      line-height: 1.2;
+      margin-left: 12px;
+      padding-top: 5px;
+      white-space: nowrap;
+    }
+    .chat-input-bar {
+      align-items: end;
+      background: #f8fafc;
+      border-top: 1px solid rgba(216, 226, 239, .9);
+      display: grid;
+      gap: 10px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      padding: 12px 14px;
+    }
+    .chat-input-bar label {
+      margin: 0;
+    }
+    .chat-input-bar label span {
+      display: none;
+    }
+    .chat-input-bar select {
+      min-height: 38px;
+    }
+    .chat-input-bar textarea {
+      border-radius: 18px;
+      max-height: 92px;
+      min-height: 42px;
+      resize: vertical;
+    }
+    .chat-input-bar button {
+      border-radius: 999px;
+      min-height: 42px;
+      padding: 0 18px;
+      width: auto !important;
+    }
+    .chat-input-fields {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 150px minmax(0, 1fr);
+    }
+    .chat-empty {
+      align-items: center;
+      color: #64748b;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: center;
+      min-height: 340px;
+      text-align: center;
+    }
+    .chat-empty strong {
+      color: #10233d;
+      font-size: 20px;
+    }
     h2 { color: #10233d; font-size: 20px; margin: 0 0 18px; }
     label { display: grid; gap: 7px; margin-bottom: 12px; }
     label span {
@@ -1239,7 +1486,9 @@
       h1 { font-size: clamp(34px, 5vw, 50px); }
     }
     @media (max-width: 880px) {
-      .main-layout, .calendar-panel, .toolbar, .card-head, .calendar-grid { grid-template-columns: 1fr; }
+      .main-layout, .calendar-panel, .toolbar, .card-head, .calendar-grid, .chat-shell { grid-template-columns: 1fr; }
+      .chat-panel { max-height: none; }
+      .chat-message { max-width: 88%; }
       .calendar-weekday { display: none; }
       .calendar-day { min-height: auto; }
       .login-screen {
@@ -1321,6 +1570,10 @@
       .metric strong { font-size: 32px; }
       main { margin: 16px; padding: 0; }
       .tabbar button { font-size: 13px; }
+      .chat-feed { padding: 14px 12px; }
+      .chat-message { max-width: 94%; }
+      .chat-input-bar { grid-template-columns: 1fr; }
+      .chat-input-fields { grid-template-columns: 1fr; }
     }
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(12px); }
@@ -1370,6 +1623,7 @@
       <a id="navHome" class="side-icon" href="#siteMain" onclick="setSection('home')" title="Inicio" aria-label="Inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/></svg></a>
       <a id="navTasks" class="side-icon active" href="#siteMain" onclick="setSection('tasks')" title="Actividades" aria-label="Actividades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="m3 6 .8.8L5.5 5"/><path d="m3 12 .8.8 1.7-1.8"/><path d="m3 18 .8.8 1.7-1.8"/></svg></a>
       <a id="navCalendar" class="side-icon" href="#siteMain" onclick="setSection('calendar')" title="Calendario" aria-label="Calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v4"/><path d="M17 3v4"/><path d="M4 8h16"/><path d="M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1z"/></svg></a>
+      <a id="navChat" class="side-icon" href="#siteMain" onclick="setSection('chat')" title="Foro interno" aria-label="Foro interno"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg><span id="chatUnreadBadge" class="nav-badge" aria-label="Mensajes pendientes">0</span></a>
       <a id="navStats" class="side-icon" href="#siteMain" onclick="setSection('stats')" title="Estadisticas" aria-label="Estadisticas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 16V9"/><path d="M12 16V5"/><path d="M17 16v-3"/></svg></a>
       <a id="navNotifications" class="side-icon" href="#siteMain" onclick="setSection('notifications')" title="Notificaciones" aria-label="Notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></a>
       <a class="side-icon" href="#siteMain" title="Configuracion" aria-label="Configuracion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2 2 0 0 1-2.83 2.83l-.04-.04a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.1 1.65V21a2 2 0 0 1-4 0v-.06a1.8 1.8 0 0 0-1.1-1.65 1.8 1.8 0 0 0-1.98.36l-.04.04a2 2 0 1 1-2.83-2.83l.04-.04A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-1.65-1.1H3a2 2 0 0 1 0-4h.06A1.8 1.8 0 0 0 4.7 8.8a1.8 1.8 0 0 0-.36-1.98l-.04-.04a2 2 0 1 1 2.83-2.83l.04.04A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1.1-1.65V3a2 2 0 0 1 4 0v.06A1.8 1.8 0 0 0 15 4.7a1.8 1.8 0 0 0 1.98-.36l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04a1.8 1.8 0 0 0-.36 1.98c.27.67.94 1.1 1.65 1.1H21a2 2 0 0 1 0 4h-.06A1.8 1.8 0 0 0 19.4 15Z"/></svg></a>
@@ -1466,7 +1720,7 @@
           <span class="attachment-title">Soportes</span>
           <div class="attachment-buttons">
             <label class="file-button">Subir archivos
-              <input id="fileInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg" onchange="addAttachments(this.files)">
+              <input id="fileInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg" onchange="addAttachments(this.files)">
             </label>
             <label class="file-button">Subir carpeta
               <input id="folderInput" type="file" multiple onchange="addAttachments(this.files)">
@@ -1531,6 +1785,49 @@
       </div>
     </section>
 
+    <section id="chatView" class="view-panel chat-view">
+      <div class="chat-shell">
+        <aside class="panel chat-composer">
+          <div class="community-tabs">
+            <button id="communityForumTab" class="active" type="button" onclick="setCommunityMode('forum')">Foro</button>
+            <button id="communityThreadTab" type="button" onclick="setCommunityMode('threads')">Chats</button>
+          </div>
+
+          <div id="forumTools">
+            <h2>Foro comun</h2>
+            <form onsubmit="createForumTopic(event)">
+              <label><span>Tema</span><input id="forumTopicTitle" required placeholder="Ej. Audiencias de la semana"></label>
+              <label><span>Contexto</span><textarea id="forumTopicDescription" rows="2" placeholder="Describe el tema para el equipo"></textarea></label>
+              <button type="submit" style="width:100%">Crear tema</button>
+            </form>
+            <div id="forumTopicList" class="chat-list"></div>
+          </div>
+
+          <div id="threadTools" style="display:none">
+            <h2>Chat interno</h2>
+            <form onsubmit="createChatThread(event)">
+              <label><span>Asunto</span><input id="chatThreadTitle" required placeholder="Ej. Seguimiento Cooplenexus"></label>
+              <label><span>Participantes</span><div id="chatParticipants" class="chat-participants"></div></label>
+              <label><span>Primer mensaje</span><textarea id="chatThreadFirstMessage" rows="2" placeholder="Mensaje inicial"></textarea></label>
+              <button type="submit" style="width:100%">Crear chat</button>
+            </form>
+            <div id="chatThreadList" class="chat-list"></div>
+          </div>
+        </aside>
+        <section class="panel chat-panel">
+          <h2 id="chatPanelTitle">Foro comun</h2>
+          <div id="chatFeed" class="chat-feed"></div>
+          <form class="chat-input-bar" onsubmit="sendChatMessage(event)">
+            <div class="chat-input-fields">
+              <label id="chatAreaLabel"><span>Area</span><select id="chatArea"></select></label>
+              <label><span>Mensaje</span><textarea id="chatMessage" rows="1" required placeholder="Escribe un mensaje"></textarea></label>
+            </div>
+            <button type="submit" style="width:100%">Enviar mensaje</button>
+          </form>
+        </section>
+      </div>
+    </section>
+
     <section id="notificationsView" class="view-panel notifications-view">
       <section class="panel">
         <h2>Notificaciones</h2>
@@ -1575,11 +1872,15 @@
     };
     const FIREBASE_TASKS_COLLECTION = "tareas";
     const FIREBASE_COMPANIES_COLLECTION = "empresas";
+    const FIREBASE_CHAT_COLLECTION = "chatMensajes";
+    const FIREBASE_FORUM_TOPICS_COLLECTION = "forumTemas";
+    const FIREBASE_CHAT_THREADS_COLLECTION = "chatHilos";
     const STORAGE_KEY = "mini-remedy-html-activities";
     const SESSION_KEY = "mini-remedy-html-session";
     const COMPANIES_KEY = "mini-remedy-html-companies";
     const BACKUP_KEY = "tareas-aee-local-backup";
     const DELETED_KEY = "tareas-aee-deleted-activity-ids";
+    const CHAT_SEEN_KEY_PREFIX = "aee-chat-last-seen";
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(BACKUP_KEY);
@@ -1649,6 +1950,15 @@
     let firebaseCompaniesLoaded = false;
     let unsubscribeFirebaseTasks = null;
     let unsubscribeFirebaseCompanies = null;
+    let unsubscribeFirebaseChat = null;
+    let unsubscribeFirebaseForumTopics = null;
+    let unsubscribeFirebaseChatThreads = null;
+    let communityMode = "forum";
+    let forumTopics = [];
+    let chatThreads = [];
+    let chatMessages = [];
+    let activeForumTopicId = "general";
+    let activeChatThreadId = "";
     const deletedActivityIds = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || "[]"));
     let audioEnabled = false;
     let alarmAudioContext = null;
@@ -1780,16 +2090,21 @@
         tasks: tasksView,
         calendar: calendarView,
         stats: statsView,
-        notifications: notificationsView
+        notifications: notificationsView,
+        chat: chatView
       };
       Object.entries(views).forEach(([key, node]) => {
         node.className = node.className.replace(/\s?active/g, "") + (key === section ? " active" : "");
       });
-      const navs = { home: navHome, tasks: navTasks, calendar: navCalendar, stats: navStats, notifications: navNotifications };
+      const navs = { home: navHome, tasks: navTasks, calendar: navCalendar, chat: navChat, stats: navStats, notifications: navNotifications };
       Object.entries(navs).forEach(([key, node]) => {
         node.classList.toggle("active", key === section);
       });
       if (section === "calendar") renderCalendar();
+      if (section === "chat") {
+        markChatSeen();
+        renderChatMessages();
+      }
       if (section === "notifications") renderNotifications();
       if (shouldRender) render();
     }
@@ -1837,12 +2152,14 @@
         option.hidden = currentUser.role !== "Admin" && !assignAreas.includes(option.value);
       });
       calendarArea.innerHTML = assignAreas.map(item => `<option value="${item}">${item}</option>`).join("");
+      renderChatAreaOptions();
       area.disabled = currentUser.role !== "Admin" && assignAreas.length === 1;
       area.value = currentUser.role === "Admin" ? "PROCESOS" : currentUser.areas[0];
       calendarArea.value = assignAreas.includes(area.value) ? area.value : assignAreas[0];
       updateOwnerField();
       updateGroupValueOptions(false);
       setSection(activeSection || "tasks", false);
+      updateChatUnreadBadge();
       render();
       setTimeout(checkAlarms, 250);
     }
@@ -1900,6 +2217,9 @@
         console.info("Firebase conectado: aee-tareas");
         listenFirebaseTasks();
         listenFirebaseCompanies();
+        listenFirebaseForumTopics();
+        listenFirebaseChatThreads();
+        listenFirebaseChat();
         setTimeout(() => {
           syncCompaniesToFirebase();
           syncToFirebase();
@@ -1948,6 +2268,360 @@
           render();
         }
       }, error => console.warn("No se pudo leer empresas desde Firebase", error));
+    }
+    function normalizeForumTopic(item) {
+      return {
+        id: item.id || crypto.randomUUID(),
+        title: String(item.title || "Tema sin titulo").trim(),
+        description: String(item.description || "").trim(),
+        author: item.author || "",
+        authorId: item.authorId || "",
+        createdAt: item.createdAt || new Date().toISOString()
+      };
+    }
+    function normalizeChatThread(item) {
+      const participantIds = Array.isArray(item.participantIds) ? item.participantIds : [];
+      return {
+        id: item.id || crypto.randomUUID(),
+        title: String(item.title || "Chat sin asunto").trim(),
+        participantIds,
+        participantNames: Array.isArray(item.participantNames) ? item.participantNames : [],
+        author: item.author || "",
+        authorId: item.authorId || "",
+        createdAt: item.createdAt || new Date().toISOString()
+      };
+    }
+    function normalizeChatMessage(item) {
+      return {
+        id: item.id || crypto.randomUUID(),
+        text: String(item.text || "").trim(),
+        author: item.author || "",
+        authorId: item.authorId || "",
+        area: normalizeAreaName(item.area || "GENERAL"),
+        mode: item.mode || item.kind || "forum",
+        topicId: item.topicId || "general",
+        threadId: item.threadId || "",
+        createdAt: item.createdAt || new Date().toISOString()
+      };
+    }
+    function defaultForumTopics() {
+      return [
+        {
+          id: "general",
+          title: "Foro general",
+          description: "Conversacion comun de todo el equipo.",
+          author: "Sistema",
+          authorId: "system",
+          createdAt: "2026-01-01T00:00:00.000Z"
+        },
+        ...forumTopics
+      ];
+    }
+    function userCanOpenThread(thread) {
+      return currentUser && (currentUser.role === "Admin" || thread.participantIds.includes(currentUser.id));
+    }
+    function chatSeenStorageKey() {
+      return currentUser ? `${CHAT_SEEN_KEY_PREFIX}-${currentUser.id}` : CHAT_SEEN_KEY_PREFIX;
+    }
+    function chatLastSeenTime() {
+      if (!currentUser) return Date.now();
+      const value = Number(localStorage.getItem(chatSeenStorageKey()) || "0");
+      return Number.isFinite(value) ? value : 0;
+    }
+    function visibleUnreadChatMessages() {
+      if (!currentUser) return [];
+      const threadIds = new Set(chatThreads.filter(userCanOpenThread).map(thread => thread.id));
+      const lastSeen = chatLastSeenTime();
+      return chatMessages.filter(message => {
+        if (message.authorId === currentUser.id) return false;
+        const createdAt = new Date(message.createdAt || 0).getTime();
+        if (!Number.isFinite(createdAt) || createdAt <= lastSeen) return false;
+        if ((message.mode || "forum") === "forum") return true;
+        return message.mode === "thread" && threadIds.has(message.threadId);
+      });
+    }
+    function updateChatUnreadBadge() {
+      if (!window.chatUnreadBadge) return;
+      const count = visibleUnreadChatMessages().length;
+      chatUnreadBadge.textContent = count > 99 ? "99+" : String(count);
+      chatUnreadBadge.classList.toggle("show", count > 0);
+      navChat?.setAttribute("aria-label", count > 0 ? `Foro interno, ${count} mensajes pendientes` : "Foro interno");
+    }
+    function markChatSeen() {
+      if (!currentUser) return;
+      localStorage.setItem(chatSeenStorageKey(), String(Date.now()));
+      updateChatUnreadBadge();
+    }
+    function listenFirebaseForumTopics() {
+      if (!firebaseDb || unsubscribeFirebaseForumTopics) return;
+      unsubscribeFirebaseForumTopics = firebaseDb.collection(FIREBASE_FORUM_TOPICS_COLLECTION)
+        .orderBy("createdAt", "desc")
+        .limit(100)
+        .onSnapshot(snapshot => {
+          forumTopics = snapshot.docs.map(doc => normalizeForumTopic({ id: doc.id, ...doc.data() }));
+          if (!defaultForumTopics().some(topic => topic.id === activeForumTopicId)) activeForumTopicId = "general";
+          if (currentUser && activeSection === "chat") renderChatMessages();
+          updateChatUnreadBadge();
+        }, error => console.warn("No se pudieron leer los temas del foro", error));
+    }
+    function listenFirebaseChatThreads() {
+      if (!firebaseDb || unsubscribeFirebaseChatThreads) return;
+      unsubscribeFirebaseChatThreads = firebaseDb.collection(FIREBASE_CHAT_THREADS_COLLECTION)
+        .orderBy("createdAt", "desc")
+        .limit(100)
+        .onSnapshot(snapshot => {
+          chatThreads = snapshot.docs.map(doc => normalizeChatThread({ id: doc.id, ...doc.data() }));
+          const visibleThreads = chatThreads.filter(userCanOpenThread);
+          if (!visibleThreads.some(thread => thread.id === activeChatThreadId)) {
+            activeChatThreadId = visibleThreads[0]?.id || "";
+          }
+          if (currentUser && activeSection === "chat") renderChatMessages();
+          updateChatUnreadBadge();
+        }, error => console.warn("No se pudieron leer los chats internos", error));
+    }
+    function listenFirebaseChat() {
+      if (!firebaseDb || unsubscribeFirebaseChat) return;
+      unsubscribeFirebaseChat = firebaseDb.collection(FIREBASE_CHAT_COLLECTION)
+        .orderBy("createdAt", "desc")
+        .limit(500)
+        .onSnapshot(snapshot => {
+          chatMessages = snapshot.docs
+            .map(doc => normalizeChatMessage({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+          if (currentUser && activeSection === "chat") renderChatMessages();
+          if (currentUser && activeSection === "chat") markChatSeen();
+          updateChatUnreadBadge();
+        }, error => console.warn("No se pudo leer la comunidad", error));
+    }
+    function renderChatAreaOptions() {
+      if (!window.chatArea || !currentUser) return;
+      const areas = currentUser.role === "Admin" ? currentUser.areas : assignmentAreasFor(currentUser);
+      const options = ["GENERAL", ...new Set(areas || [])];
+      chatArea.innerHTML = options.map(item => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
+      chatAreaLabel.style.display = communityMode === "forum" ? "grid" : "none";
+    }
+    function renderChatParticipants() {
+      if (!window.chatParticipants || !currentUser) return;
+      chatParticipants.innerHTML = USERS
+        .filter(user => user.id !== currentUser.id)
+        .map(user => `<label><input type="checkbox" value="${escapeHtml(user.id)}"><span>${escapeHtml(user.name)}</span></label>`)
+        .join("");
+    }
+    function setCommunityMode(mode, shouldRender = true) {
+      communityMode = mode;
+      if (communityForumTab) communityForumTab.classList.toggle("active", mode === "forum");
+      if (communityThreadTab) communityThreadTab.classList.toggle("active", mode === "threads");
+      if (forumTools) forumTools.style.display = mode === "forum" ? "block" : "none";
+      if (threadTools) threadTools.style.display = mode === "threads" ? "block" : "none";
+      if (shouldRender) renderChatMessages();
+    }
+    function selectForumTopic(topicId) {
+      activeForumTopicId = topicId || "general";
+      communityMode = "forum";
+      renderChatMessages();
+    }
+    function selectChatThread(threadId) {
+      activeChatThreadId = threadId || "";
+      communityMode = "threads";
+      renderChatMessages();
+    }
+    async function createForumTopic(event) {
+      event.preventDefault();
+      if (!currentUser || !firebaseReady || !firebaseDb) {
+        alert("Firebase aun no esta conectado. Intenta de nuevo en unos segundos.");
+        return;
+      }
+      const title = forumTopicTitle.value.trim();
+      const description = forumTopicDescription.value.trim();
+      if (!title) return;
+      try {
+        const doc = await firebaseDb.collection(FIREBASE_FORUM_TOPICS_COLLECTION).add({
+          title,
+          description,
+          author: currentUser.name,
+          authorId: currentUser.id,
+          createdAt: new Date().toISOString()
+        });
+        activeForumTopicId = doc.id;
+        event.target.reset();
+      } catch (error) {
+        console.warn("No se pudo crear el tema", error);
+        alert("No se pudo crear el tema. Revisa la conexion.");
+      }
+    }
+    async function createChatThread(event) {
+      event.preventDefault();
+      if (!currentUser || !firebaseReady || !firebaseDb) {
+        alert("Firebase aun no esta conectado. Intenta de nuevo en unos segundos.");
+        return;
+      }
+      const title = chatThreadTitle.value.trim();
+      const selectedIds = Array.from(chatParticipants.querySelectorAll("input:checked")).map(input => input.value);
+      if (!title || !selectedIds.length) {
+        alert("Elige al menos un participante.");
+        return;
+      }
+      const participantIds = Array.from(new Set([currentUser.id, ...selectedIds]));
+      const participantNames = participantIds.map(id => USERS.find(user => user.id === id)?.name || id);
+      const firstMessage = chatThreadFirstMessage.value.trim();
+      try {
+        const doc = await firebaseDb.collection(FIREBASE_CHAT_THREADS_COLLECTION).add({
+          title,
+          participantIds,
+          participantNames,
+          author: currentUser.name,
+          authorId: currentUser.id,
+          createdAt: new Date().toISOString()
+        });
+        activeChatThreadId = doc.id;
+        if (firstMessage) {
+          await firebaseDb.collection(FIREBASE_CHAT_COLLECTION).add({
+            text: firstMessage,
+            author: currentUser.name,
+            authorId: currentUser.id,
+            mode: "thread",
+            threadId: doc.id,
+            area: "CHAT",
+            createdAt: new Date().toISOString()
+          });
+        }
+        event.target.reset();
+        renderChatParticipants();
+        setCommunityMode("threads");
+      } catch (error) {
+        console.warn("No se pudo crear el chat", error);
+        alert("No se pudo crear el chat. Revisa la conexion.");
+      }
+    }
+    async function sendChatMessage(event) {
+      event.preventDefault();
+      if (!currentUser || !firebaseReady || !firebaseDb) {
+        alert("Firebase aun no esta conectado. Intenta de nuevo en unos segundos.");
+        return;
+      }
+      const text = chatMessage.value.trim();
+      if (!text) return;
+      if (communityMode === "threads" && !activeChatThreadId) {
+        alert("Primero crea o selecciona un chat interno.");
+        return;
+      }
+      const message = {
+        text,
+        author: currentUser.name,
+        authorId: currentUser.id,
+        area: communityMode === "forum" ? (chatArea.value || "GENERAL") : "CHAT",
+        mode: communityMode === "forum" ? "forum" : "thread",
+        topicId: communityMode === "forum" ? activeForumTopicId : "",
+        threadId: communityMode === "threads" ? activeChatThreadId : "",
+        createdAt: new Date().toISOString()
+      };
+      chatMessage.value = "";
+      try {
+        await firebaseDb.collection(FIREBASE_CHAT_COLLECTION).add(message);
+      } catch (error) {
+        console.warn("No se pudo enviar el mensaje", error);
+        alert("No se pudo enviar el mensaje. Revisa la conexion.");
+        chatMessage.value = text;
+      }
+    }
+    async function deleteChatMessage(messageId) {
+      if (!currentUser || !firebaseReady || !firebaseDb || !messageId) return;
+      const message = chatMessages.find(item => item.id === messageId);
+      if (!message || (currentUser.role !== "Admin" && message.authorId !== currentUser.id)) {
+        alert("Solo puedes borrar tus propios mensajes. El administrador puede borrar cualquier mensaje.");
+        return;
+      }
+      if (!confirm("¿Eliminar este mensaje?")) return;
+      try {
+        await firebaseDb.collection(FIREBASE_CHAT_COLLECTION).doc(messageId).delete();
+      } catch (error) {
+        console.warn("No se pudo eliminar el mensaje", error);
+        alert("No se pudo eliminar el mensaje. Revisa la conexion.");
+      }
+    }
+    async function deleteChatThread(threadId) {
+      if (!currentUser || !firebaseReady || !firebaseDb || !threadId) return;
+      const thread = chatThreads.find(item => item.id === threadId);
+      if (!thread || (currentUser.role !== "Admin" && thread.authorId !== currentUser.id)) {
+        alert("Solo el creador del chat o el administrador puede eliminarlo.");
+        return;
+      }
+      if (!confirm("¿Eliminar este chat interno y todos sus mensajes?")) return;
+      try {
+        const messages = await firebaseDb.collection(FIREBASE_CHAT_COLLECTION)
+          .where("mode", "==", "thread")
+          .where("threadId", "==", threadId)
+          .get();
+        const batch = firebaseDb.batch();
+        messages.docs.forEach(doc => batch.delete(doc.ref));
+        batch.delete(firebaseDb.collection(FIREBASE_CHAT_THREADS_COLLECTION).doc(threadId));
+        await batch.commit();
+        if (activeChatThreadId === threadId) activeChatThreadId = "";
+      } catch (error) {
+        console.warn("No se pudo eliminar el chat", error);
+        alert("No se pudo eliminar el chat. Revisa la conexion.");
+      }
+    }
+    function renderForumTopicList() {
+      if (!window.forumTopicList) return;
+      const topics = defaultForumTopics();
+      forumTopicList.innerHTML = topics.map(topic => {
+        const count = chatMessages.filter(message => (message.mode || "forum") === "forum" && (message.topicId || "general") === topic.id).length;
+        return `<button class="chat-topic ${topic.id === activeForumTopicId ? "active" : ""}" type="button" onclick="selectForumTopic('${escapeHtml(topic.id)}')">
+          <strong>${escapeHtml(topic.title)}</strong>
+          <span>${count} mensajes${topic.description ? ` | ${escapeHtml(topic.description)}` : ""}</span>
+        </button>`;
+      }).join("");
+    }
+    function renderChatThreadList() {
+      if (!window.chatThreadList) return;
+      const visibleThreads = chatThreads.filter(userCanOpenThread);
+      chatThreadList.innerHTML = visibleThreads.length ? visibleThreads.map(thread => {
+        const count = chatMessages.filter(message => message.mode === "thread" && message.threadId === thread.id).length;
+        const canDelete = currentUser && (currentUser.role === "Admin" || thread.authorId === currentUser.id);
+        return `<button class="chat-topic ${thread.id === activeChatThreadId ? "active" : ""}" type="button" onclick="selectChatThread('${escapeHtml(thread.id)}')">
+          <strong>${escapeHtml(thread.title)}</strong>
+          <span>${count} mensajes | ${escapeHtml(thread.participantNames.join(", "))}</span>
+        </button>
+        ${canDelete ? `<button class="chat-delete" type="button" onclick="deleteChatThread('${escapeHtml(thread.id)}')">Eliminar chat</button>` : ""}`;
+      }).join("") : `<div class="chat-empty"><strong>No hay chats internos.</strong><span>Crea un chat con los participantes necesarios.</span></div>`;
+    }
+    function renderChatMessages() {
+      if (!window.chatFeed) return;
+      renderChatAreaOptions();
+      renderChatParticipants();
+      setCommunityMode(communityMode, false);
+      renderForumTopicList();
+      renderChatThreadList();
+      const activeTopic = defaultForumTopics().find(topic => topic.id === activeForumTopicId);
+      const activeThread = chatThreads.find(thread => thread.id === activeChatThreadId);
+      chatPanelTitle.textContent = communityMode === "forum"
+        ? `Foro comun: ${activeTopic?.title || "Foro general"}`
+        : `Chat interno: ${activeThread?.title || "selecciona un chat"}`;
+      const visibleMessages = chatMessages.filter(item => {
+        if (communityMode === "forum") {
+          return (item.mode || "forum") === "forum" && (item.topicId || "general") === activeForumTopicId;
+        }
+        return item.mode === "thread" && item.threadId === activeChatThreadId && activeThread && userCanOpenThread(activeThread);
+      });
+      if (!visibleMessages.length) {
+        chatFeed.innerHTML = `<div class="chat-empty"><strong>No hay mensajes todavia.</strong><span>Escribe el primer mensaje.</span></div>`;
+        return;
+      }
+      chatFeed.innerHTML = visibleMessages.map(item => {
+        const own = currentUser && item.authorId === currentUser.id;
+        const canDelete = currentUser && (currentUser.role === "Admin" || item.authorId === currentUser.id);
+        const date = item.createdAt ? new Date(item.createdAt).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" }) : "";
+        return `<article class="chat-message ${own ? "own" : ""}">
+          <div class="chat-meta">
+            <span class="chat-author">${escapeHtml(item.author || "Usuario")}</span>
+            ${communityMode === "forum" ? `<span class="chat-area-pill">${escapeHtml(item.area || "GENERAL")}</span>` : ""}
+            ${canDelete ? `<button class="chat-delete" type="button" onclick="deleteChatMessage('${escapeHtml(item.id)}')">Eliminar</button>` : ""}
+          </div>
+          <p class="chat-body">${escapeHtml(item.text)}<span class="chat-time">${escapeHtml(date)}${own ? " ✓✓" : ""}</span></p>
+        </article>`;
+      }).join("");
+      chatFeed.scrollTop = chatFeed.scrollHeight;
     }
     function firebaseSafeAttachment(file) {
       return {
@@ -2947,6 +3621,7 @@
       totalOk.textContent = activeData.filter(x => x.risk === "ok").length;
       renderAlerts();
       renderNotifications();
+      if (activeSection === "chat") renderChatMessages();
       const q = search.value.toLowerCase();
       const f = filter.value;
       const visible = activeData.filter(item => {
